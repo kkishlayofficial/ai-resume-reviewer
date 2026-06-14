@@ -1,0 +1,144 @@
+.wizard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: var(--space-12);
+}
+
+.stepWrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 260px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+
+.clickable {
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3));
+  transition: background-color var(--transition-base);
+}
+
+.clickable:hover {
+  background-color: var(--color-bg-muted);
+}
+
+.clickable:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ── Circle ─────────────────────────────────────────────────────────────── */
+.stepCircle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  flex-shrink: 0;
+  border: 2px solid;
+  transition: background-color var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+}
+
+.active .stepCircle {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.completed .stepCircle {
+  background-color: var(--color-success);
+  border-color: var(--color-success);
+  color: #ffffff;
+}
+
+.locked .stepCircle {
+  background-color: var(--color-warning-bg);
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.future .stepCircle {
+  background-color: var(--color-bg);
+  border-color: var(--color-border-strong);
+  color: var(--color-subtle);
+}
+
+/* ── Label ───────────────────────────────────────────────────────────────── */
+.stepLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  transition: color var(--transition-base);
+}
+
+.active .stepLabel {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.completed .stepLabel {
+  color: var(--color-success);
+}
+
+.locked .stepLabel {
+  color: var(--color-warning);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.modifiedBadge {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background-color: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+  line-height: 1.4;
+}
+
+.future .stepLabel {
+  color: var(--color-subtle);
+}
+
+/* ── Connector ───────────────────────────────────────────────────────────── */
+.connector {
+  flex: 1;
+  height: 2px;
+  background-color: var(--color-border);
+  margin: 0 var(--space-3);
+  transition: background-color var(--transition-slow);
+}
+
+.connectorDone {
+  background-color: var(--color-success);
+}
+
+@media (max-width: 600px) {
+  .stepWrapper {
+    max-width: unset;
+  }
+  .stepLabel {
+    display: none;
+  }
+}

@@ -1,0 +1,301 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.dashHeader {
+  text-align: center;
+  margin-bottom: var(--space-2);
+}
+
+.dashTitle {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.dashSub {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  margin-top: var(--space-2);
+}
+
+/* ── Overall Score Card ─────────────────────────────────────────────────── */
+.overallCard {
+  display: flex;
+  justify-content: center;
+}
+
+.overallInner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+}
+
+.overallInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.overallLabel {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.overallDesc {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+}
+
+/* ── Score Grid ─────────────────────────────────────────────────────────── */
+.scoreGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+}
+
+.scoreCard {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.scoreCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.scoreCardLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.scoreCardValue {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1;
+}
+
+.scoreCardBar {
+  width: 100%;
+}
+
+.scoreBarTrack {
+  height: 5px;
+  background-color: var(--color-bg-muted);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.scoreBarFill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.8s ease;
+}
+
+.scoreCardReasoning {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+/* ── Section (generic) ──────────────────────────────────────────────────── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── Summary ────────────────────────────────────────────────────────────── */
+.summaryText {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+/* ── Chips ──────────────────────────────────────────────────────────────── */
+.chipSet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ── Strengths / Weaknesses ─────────────────────────────────────────────── */
+.swGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+}
+
+.swCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.strengthDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-success);
+  flex-shrink: 0;
+}
+
+.weaknessDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-danger);
+  flex-shrink: 0;
+}
+
+.bulletList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.bulletItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+.bulletIconGreen,
+.bulletIconRed {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Recommendations ────────────────────────────────────────────────────── */
+.recList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.recCard {
+  background-color: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.recHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.recTitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.recText {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+/* ── Job Fit Card ───────────────────────────────────────────────────────── */
+.jobFitCard {
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 1px solid;
+}
+
+.jobFitGreen {
+  background-color: var(--color-success-bg);
+  border-color: var(--color-success-border);
+}
+
+.jobFitRed {
+  background-color: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+}
+
+.jobFitHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.jobFitIcon {
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.jobFitTitle {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.jobFitExplanation {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+/* ── Actions ────────────────────────────────────────────────────────────── */
+.dashActions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .scoreGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .swGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .overallInner {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--space-6);
+  }
+}
+
+@media (max-width: 600px) {
+  .dashActions {
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,115 @@
+.section {
+  padding: var(--space-24) var(--space-6);
+  background-color: var(--color-bg-subtle);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: var(--space-16);
+}
+
+.heading {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-text);
+  margin-bottom: var(--space-4);
+  letter-spacing: -0.02em;
+}
+
+.subtext {
+  font-size: var(--font-size-md);
+  color: var(--color-muted);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* ── Steps ────────────────────────────────────────────────────────────────── */
+.steps {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+.stepWrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.step {
+  flex: 1;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.stepIcon {
+  width: 52px;
+  height: 52px;
+  background-color: var(--color-primary-light);
+  border: 1px solid var(--color-primary-muted);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.stepNum {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-muted);
+  letter-spacing: 0.08em;
+}
+
+.stepTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.stepDesc {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+.connector {
+  flex-shrink: 0;
+  padding: 0 var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: -40px;
+}
+
+@media (max-width: 768px) {
+  .steps {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .stepWrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .connector {
+    margin-top: 0;
+    padding: var(--space-1) 0;
+    transform: rotate(90deg);
+  }
+}

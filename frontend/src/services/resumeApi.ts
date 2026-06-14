@@ -1,0 +1,218 @@
+import type {
+  ResumeExtractionResponse,
+  ResumeReviewRequest,
+  ResumeReviewResponse,
+} from "../types/resume";
+
+// ─── Toggle between mock and real API ────────────────────────────────────────
+export const MOCK_MODE = false;
+
+const API_BASE = "http://localhost:8000";
+
+// ─── Mock Data ────────────────────────────────────────────────────────────────
+const MOCK_EXTRACTED_TEXT = `John Smith
+Senior Frontend Engineer
+john.smith@email.com | (555) 123-4567 | LinkedIn: linkedin.com/in/johnsmith | GitHub: github.com/johnsmith
+
+PROFESSIONAL SUMMARY
+Experienced Frontend Engineer with 6+ years building high-performance React applications. Strong expertise in React, TypeScript, Next.js, and GraphQL. Led frontend architecture for SaaS products serving 100k+ users. Passionate about accessibility and performance optimization.
+
+WORK EXPERIENCE
+
+Senior Frontend Engineer | TechCorp Inc. | 2021 – Present
+• Architected and led development of a component library used across 5 product teams, reducing UI development time by 40%
+• Optimized Core Web Vitals achieving 95+ Lighthouse scores across all pages
+• Mentored 4 junior developers and established frontend coding standards
+• Built real-time dashboard using WebSockets serving 50k concurrent users
+
+Frontend Engineer | StartupXYZ | 2019 – 2021
+• Developed React-based SPA with TypeScript and GraphQL, improving data load time by 60%
+• Implemented comprehensive testing strategy with Jest and React Testing Library (85% coverage)
+• Collaborated with design team to implement accessible UI components (WCAG 2.1 AA compliant)
+
+Junior Frontend Developer | WebAgency | 2018 – 2019
+• Built responsive landing pages and interactive UI components for 15+ client projects
+• Introduced React to the team's tech stack and conducted internal knowledge-sharing sessions
+
+SKILLS
+React, Next.js, TypeScript, JavaScript (ES2022+), GraphQL, Apollo Client, Storybook, Accessibility (WCAG 2.1), CSS-in-JS, Tailwind CSS, Webpack, Vite, Jest, React Testing Library, REST APIs, WebSockets, Node.js, Git
+
+EDUCATION
+B.S. Computer Science | State University | 2018`;
+
+const MOCK_REVIEW_RESPONSE: ResumeReviewResponse = {
+  overall_score: 92,
+  ats_score: {
+    score: 84,
+    reasoning:
+      "Good keyword alignment with the job description. React, TypeScript, and Next.js are well represented. Missing CI/CD pipeline experience and Docker containerization references which are listed as requirements.",
+  },
+  technical_score: {
+    score: 91,
+    reasoning:
+      "Strong React ecosystem expertise with production-scale experience. GraphQL, TypeScript, and testing practices are explicitly mentioned with measurable outcomes. Node.js experience adds versatility.",
+  },
+  communication_score: {
+    score: 87,
+    reasoning:
+      'Clear resume structure with well-quantified achievements. Metrics like "40% reduction" and "50k concurrent users" demonstrate impact. Summary is concise and role-appropriate.',
+  },
+  summary:
+    "This candidate demonstrates strong frontend engineering capabilities with 6+ years of experience matching the senior-level role requirements. The React/TypeScript stack expertise aligns closely with the job description. There are minor gaps around DevOps and CI/CD tooling that could be addressed. Overall, this is a highly competitive application for the role.",
+  skills: [
+    "React",
+    "Next.js",
+    "TypeScript",
+    "JavaScript",
+    "GraphQL",
+    "Apollo Client",
+    "Storybook",
+    "Accessibility",
+    "Tailwind CSS",
+    "Jest",
+    "React Testing Library",
+    "Node.js",
+    "WebSockets",
+    "Webpack",
+    "Vite",
+    "REST APIs",
+  ],
+  strengths: [
+    "Strong React ecosystem expertise with 6+ years of production experience",
+    "Demonstrated quantifiable impact (40% development time reduction, 95+ Lighthouse scores)",
+    "Accessibility-first mindset (WCAG 2.1 AA compliance)",
+    "Full-stack capability with Node.js and GraphQL",
+    "Leadership and mentoring experience aligns with senior role expectations",
+    "Component library architecture experience at scale",
+  ],
+  weaknesses: [
+    "No mention of CI/CD pipeline configuration (GitHub Actions, Jenkins, CircleCI)",
+    "Docker and containerization skills not referenced",
+    "No cloud platform experience mentioned (AWS, GCP, Azure)",
+    "Micro-frontend architecture experience absent",
+    "Limited backend depth beyond Node.js",
+  ],
+  missing_keywords: [
+    "Docker",
+    "CI/CD",
+    "GitHub Actions",
+    "Micro Frontends",
+    "AWS",
+    "Kubernetes",
+    "Redis",
+  ],
+  recommendations: [
+    {
+      priority: "high",
+      title: "Add CI/CD and DevOps tooling experience",
+      recommendation:
+        'The job description explicitly requires CI/CD pipeline experience. Add specific examples: "Configured GitHub Actions pipelines for automated testing and deployment" or reference any Jenkins/CircleCI work from your experience.',
+    },
+    {
+      priority: "high",
+      title: "Include Docker containerization references",
+      recommendation:
+        "Docker is listed as a required skill. If you have Docker experience, add it to your skills section and reference containerized development environments in your project descriptions.",
+    },
+    {
+      priority: "medium",
+      title: "Mention micro-frontend or module federation experience",
+      recommendation:
+        "The role mentions micro-frontend architecture. Add any experience with Webpack Module Federation, single-spa, or independent team deployments to strengthen your technical alignment.",
+    },
+    {
+      priority: "medium",
+      title: "Quantify the component library adoption metrics",
+      recommendation:
+        "Your component library work is strong but could include usage metrics: number of components, teams using it, bundle size improvements, or design system coverage percentage.",
+    },
+    {
+      priority: "low",
+      title: "Add a cloud platform skill",
+      recommendation:
+        "Even basic AWS S3/CloudFront or Vercel/Netlify deployment experience is worth mentioning as it completes the full deployment lifecycle picture for a senior engineer.",
+    },
+  ],
+  job_fit: {
+    fit: true,
+    explanation:
+      "The candidate demonstrates strong frontend engineering experience with 6+ years in the React/TypeScript ecosystem, making them a strong match for this senior role. The quantified achievements and accessibility expertise stand out. The primary gap is DevOps and CI/CD tooling, which can be addressed. Overall, this is a good fit for the position.",
+  },
+};
+
+// ─── API Helpers ──────────────────────────────────────────────────────────────
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// ─── extractResume ────────────────────────────────────────────────────────────
+export async function extractResume(
+  file: File,
+): Promise<ResumeExtractionResponse> {
+  if (MOCK_MODE) {
+    await sleep(2200);
+    return {
+      extracted_text: MOCK_EXTRACTED_TEXT,
+      extraction_warnings: [],
+    };
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_BASE}/resume/extract`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Extraction failed" }));
+    throw new Error(error.detail ?? "Failed to extract resume");
+  }
+
+  return response.json() as Promise<ResumeExtractionResponse>;
+}
+
+// ─── reviewResume ─────────────────────────────────────────────────────────────
+export async function reviewResume(
+  payload: ResumeReviewRequest,
+): Promise<ResumeReviewResponse> {
+  if (MOCK_MODE) {
+    await sleep(3500);
+    return MOCK_REVIEW_RESPONSE;
+  }
+
+  const response = await fetch(`${API_BASE}/resume/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Review failed" }));
+    throw new Error(error.detail ?? "Failed to review resume");
+  }
+
+  return response.json() as Promise<ResumeReviewResponse>;
+}
+
+export async function getReport(reviewResult: ResumeReviewResponse): Promise<Response> {
+  const response = await fetch(`${API_BASE}/resume/report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(reviewResult),
+  });
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Review failed" }));
+    throw new Error(error.detail ?? "Failed to review resume");
+  }
+
+  return response;
+}

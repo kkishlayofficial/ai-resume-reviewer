@@ -1,0 +1,151 @@
+.wrapper {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-8) 0;
+}
+
+.card {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-12) var(--space-16);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  max-width: 440px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+/* ── Orbit animation ─────────────────────────────────────────────────────── */
+.orbitWrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orbitRing {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--color-primary);
+  border-right-color: var(--color-primary-muted);
+  animation: orbit 1.2s linear infinite;
+}
+
+.orbitRing2 {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-bottom-color: var(--color-primary);
+  animation: orbit 0.9s linear infinite reverse;
+}
+
+.orbitCore {
+  width: 14px;
+  height: 14px;
+  background-color: var(--color-primary);
+  border-radius: 50%;
+  animation: pulse-core 1.4s ease-in-out infinite;
+}
+
+@keyframes orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-core {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.75); opacity: 0.7; }
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+/* ── Messages ─────────────────────────────────────────────────────────────── */
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+}
+
+.message {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-subtle);
+  transition: color var(--transition-slow);
+}
+
+.messageActive {
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+}
+
+.messageDone {
+  color: var(--color-success);
+}
+
+.msgIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.activeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-primary);
+  animation: bounce-dot 1s ease-in-out infinite;
+}
+
+.futureDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-border-strong);
+}
+
+@keyframes bounce-dot {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+}
+
+/* ── Progress ─────────────────────────────────────────────────────────────── */
+.progressTrack {
+  width: 100%;
+  height: 6px;
+  background-color: var(--color-bg-muted);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+
+.estimate {
+  font-size: var(--font-size-xs);
+  color: var(--color-subtle);
+}
