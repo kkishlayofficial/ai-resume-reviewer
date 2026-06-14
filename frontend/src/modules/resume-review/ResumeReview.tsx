@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import type { ExperienceLevel, ResumeReviewResponse } from "../../types/resume";
+import { applyRecommendationToText } from "./utils/applyRecommendation";
 import {
   extractResume,
   reviewResume,
@@ -15,6 +16,12 @@ import { Step3Dashboard } from "./Step3Dashboard/Step3Dashboard";
 
 type Phase = "upload" | "extracting" | "verify" | "reviewing" | "dashboard";
 
+interface AppliedRange {
+  start: number;
+  end: number;
+  recIndex: number;
+}
+
 interface State {
   phase: Phase;
   file: File | null;
@@ -24,6 +31,9 @@ interface State {
   jobDescription: string; // persisted across step navigation
   experienceLevel: ExperienceLevel; // persisted across step navigation
   reviewResult: ResumeReviewResponse | null;
+  baselineResult: ResumeReviewResponse | null; // first review result — never overwritten on re-evaluate
+  appliedRecommendations: number[]; // indices of applied recs, persisted
+  appliedRanges: AppliedRange[]; // transient highlight ranges — not persisted
   error: string | null;
   maxReachedStep: 1 | 2 | 3; // highest step ever successfully reached — survives back-navigation
   step1Dirty: boolean; // file changed after extraction — step 2+ locked until re-extract
@@ -39,6 +49,9 @@ const INITIAL_STATE: State = {
   jobDescription: "",
   experienceLevel: "mid",
   reviewResult: null,
+  baselineResult: null,
+  appliedRecommendations: [],
+  appliedRanges: [],
   error: null,
   maxReachedStep: 1,
   step1Dirty: false,
@@ -48,8 +61,8 @@ const INITIAL_STATE: State = {
 const STORAGE_KEY = "resume-review-state";
 const FILE_STORAGE_KEY = "resume-review-file";
 
-// Persisted shape excludes File (handled separately) and transient error
-type PersistedState = Omit<State, "file" | "error">;
+// Persisted shape excludes File (handled separately), transient error, and transient highlight ranges
+type PersistedState = Omit<State, "file" | "error" | "appliedRanges">;
 
 function loadPersistedFile(): File | null {
   try {
@@ -76,6 +89,17 @@ function loadState(): State {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return INITIAL_STATE;
     const parsed = JSON.parse(raw) as PersistedState;
+
+    // Discard any persisted reviewResult / baselineResult whose recommendations
+    // predate the new schema (missing `section` field) to avoid runtime crashes.
+    const hasStaleRecs = (result: ResumeReviewResponse | null) =>
+      result?.recommendations?.some((r) => !("section" in r)) ?? false;
+    if (hasStaleRecs(parsed.reviewResult) || hasStaleRecs(parsed.baselineResult)) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(FILE_STORAGE_KEY);
+      return INITIAL_STATE;
+    }
+
     // Normalize in-flight phases — they cannot be resumed after a page refresh
     const phase: Phase =
       parsed.phase === "extracting"
@@ -92,7 +116,7 @@ function loadState(): State {
 
 function saveState(state: State): void {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { file: _file, error: _error, ...toSave } = state;
+  const { file: _file, error: _error, appliedRanges: _appliedRanges, ...toSave } = state;
   // Don't persist in-flight phases
   const phase: Phase =
     toSave.phase === "extracting"
@@ -200,6 +224,9 @@ export function ResumeReview() {
         ...s,
         phase: "dashboard",
         reviewResult: result,
+        baselineResult: s.baselineResult ?? result, // only set on the first review
+        appliedRecommendations: [], // new rec set — reset applied indices
+        appliedRanges: [],
         step2Dirty: false,
         maxReachedStep: 3,
       }));
@@ -217,6 +244,9 @@ export function ResumeReview() {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(FILE_STORAGE_KEY);
     setState(INITIAL_STATE);
+    setTimeout(() => {
+      document.getElementById("review")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
   };
   const handleBack = () => setState((s) => ({ ...s, phase: "upload" }));
 
@@ -241,8 +271,38 @@ export function ResumeReview() {
     setState((s) => ({
       ...s,
       editedResumeText: text,
+      appliedRanges: [], // positions become stale after manual edits
       step2Dirty: s.reviewResult !== null || s.step2Dirty,
     }));
+  };
+
+  const handleApplyRecommendation = (index: number) => {
+    const rec = state.reviewResult?.recommendations[index];
+    if (!rec || rec.action === "replace") return;
+    const { newText, insertedStart, insertedEnd } = applyRecommendationToText(
+      state.editedResumeText,
+      rec.section,
+      rec.action,
+      rec.suggested_content,
+    );
+    setState((s) => ({
+      ...s,
+      editedResumeText: newText,
+      appliedRecommendations: [...s.appliedRecommendations, index],
+      appliedRanges: [
+        ...s.appliedRanges,
+        { start: insertedStart, end: insertedEnd, recIndex: index },
+      ],
+      step2Dirty: true,
+    }));
+  };
+
+  const handleReEvaluate = () => {
+    handleReview(
+      state.editedResumeText,
+      state.jobDescription,
+      state.experienceLevel,
+    );
   };
 
   const handleJobDescriptionChange = (jd: string) => {
@@ -374,6 +434,7 @@ export function ResumeReview() {
             onExperienceLevelChange={handleExperienceLevelChange}
             onReview={handleReview}
             onBack={handleBack}
+            appliedRanges={state.appliedRanges}
           />
         )}
 
@@ -382,6 +443,10 @@ export function ResumeReview() {
         {state.phase === "dashboard" && state.reviewResult && (
           <Step3Dashboard
             result={state.reviewResult}
+            baselineResult={state.baselineResult}
+            appliedRecommendations={state.appliedRecommendations}
+            onApplyRecommendation={handleApplyRecommendation}
+            onReEvaluate={handleReEvaluate}
             onReset={handleReset}
             handleDownloadReport={handleDownloadReport}
           />

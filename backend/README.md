@@ -75,7 +75,18 @@ Sends the (potentially user-edited) resume text, a job description, and an exper
 }
 ```
 
-**Response:** See `ResumeReviewResponse` in `schemas/resume.py` — includes overall score, ATS/technical/communication sub-scores with reasoning, skills list, strengths, weaknesses, missing keywords, prioritized recommendations, and a job fit verdict.
+**Response:** See `ResumeReviewResponse` in `schemas/resume.py` — includes overall score, ATS/technical/communication sub-scores with reasoning, skills list, strengths, weaknesses, missing keywords, patch-based actionable improvements, and a job fit verdict.
+
+Each item in `recommendations` includes:
+
+| Field | Type | Description |
+|---|---|---|
+| `priority` | `"high" \| "medium" \| "low"` | Importance ranking |
+| `title` | `string` | Short heading for the improvement |
+| `section` | `"summary" \| "experience" \| "skills" \| "projects" \| "education"` | Target resume section |
+| `action` | `"append" \| "insert" \| "replace"` | How to apply — `append`/`insert` are auto-applied by the frontend; `replace` is a manual suggestion |
+| `suggested_content` | `string` | Exact text to add (or `Current: …\nSuggested: …` format for `replace`) |
+| `reasoning` | `string` | 1–2 sentences explaining why this change matters for the target role |
 
 ---
 

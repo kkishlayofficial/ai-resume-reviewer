@@ -33,10 +33,13 @@ SYSTEM_PROMPT = """
     - You have to provide a list of strengths. Strengths should highlight areas where the resume aligns well with the job description and expected experience level.
     - You have to provide a list of weaknesses. Weaknesses should highlight gaps, missing evidence, or shortcomings relative to the job description and expected experience level.
     - You have to provide a list of missing keywords that are not available in the resume but the job description requires. Only include keywords that are important for the target role and are absent or insufficiently represented in the resume.
-    - You have to provide a list of recommentions that is applicable for the resume based on the job description. Provide detailed recommendations. Recommendations should be actionable, specific, and prioritized. Avoid generic advice such as "improve your resume.". A recommendation will be an object with three keys
-        - Priority - which contains three values - high, medium and low
-        - Title - Title about the recommendation.
-        - Recommendation - Based on the priority provide the recommendation in detail
+    - You have to provide a list of recommendations that is applicable for the resume based on the job description. Provide detailed recommendations. Recommendations should be actionable, specific, and prioritized. Avoid generic advice such as "improve your resume.". A recommendation will be an object with six keys:
+        - priority: Must be one of: "high", "medium", "low"
+        - title: A short heading describing the improvement (e.g., "Add CI/CD Experience")
+        - section: The resume section this recommendation applies to. Must be exactly one of: "summary", "experience", "skills", "projects", "education"
+        - action: How to apply this recommendation. Must be exactly one of: "append" (add content to the end of the section), "insert" (add content to the beginning of the section, right after the section header), "replace" (suggest replacing existing content — use ONLY when rewriting a specific existing bullet or line; do NOT use for adding new content). Prefer "append" or "insert" over "replace" whenever possible.
+        - suggested_content: The exact text to add or replace. For "append" and "insert", provide only the new content to add (e.g., a skill name, a bullet point, or a sentence). For "replace", write it in this format: "Current: [the exact existing text]\nSuggested: [the improved replacement text]"
+        - reasoning: 1–2 sentences explaining why this specific change matters for the target job description.
     - You also have to provide whether the resume of the candidate is fit for the job or not. Job Fit is an object with two keys: fit: return true or false and explanation: Provide the details why candidate is fit or unfit. Provide a concise summary in approximately 80-120 words.
 
     Do not:

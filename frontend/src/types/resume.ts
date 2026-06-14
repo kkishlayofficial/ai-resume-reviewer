@@ -9,7 +9,10 @@ export interface ScoredAssessment {
 export interface Recommendation {
   priority: Priority;
   title: string;
-  recommendation: string;
+  section: 'summary' | 'experience' | 'skills' | 'projects' | 'education';
+  action: 'append' | 'insert' | 'replace';
+  suggested_content: string;
+  reasoning: string;
 }
 
 export interface JobFit {

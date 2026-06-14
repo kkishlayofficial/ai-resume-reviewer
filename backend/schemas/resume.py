@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from enum import Enum
+from typing import Literal
 
 
 class Priority(str, Enum):
@@ -18,7 +19,10 @@ class Recommendation(BaseModel):
     model_config = ConfigDict(extra="forbid")
     priority: Priority
     title: str
-    recommendation: str
+    section: Literal["summary", "experience", "skills", "projects", "education"]
+    action: Literal["append", "insert", "replace"]
+    suggested_content: str
+    reasoning: str
 
 
 class JobFit(BaseModel):

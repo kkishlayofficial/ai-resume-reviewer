@@ -1,6 +1,38 @@
+import { useRef } from 'react';
+import type { ReactNode } from 'react';
 import type { ExperienceLevel } from '../../../types/resume';
 import styles from './Step2Verify.module.css';
 import { Button } from '../../../components/ui/Button/Button';
+
+interface AppliedRange {
+  start: number;
+  end: number;
+  recIndex: number;
+}
+
+function renderHighlightedText(
+  text: string,
+  ranges: AppliedRange[],
+): ReactNode {
+  if (ranges.length === 0) return text;
+  const sorted = [...ranges].sort((a, b) => a.start - b.start);
+  const parts: React.ReactNode[] = [];
+  let pos = 0;
+  for (const range of sorted) {
+    if (range.start > pos) parts.push(text.slice(pos, range.start));
+    const content = text.slice(range.start, range.end);
+    if (content) {
+      parts.push(
+        <mark key={`${range.recIndex}-${range.start}`} className={styles.highlightMark}>
+          {content}
+        </mark>,
+      );
+    }
+    pos = range.end;
+  }
+  if (pos < text.length) parts.push(text.slice(pos));
+  return parts;
+}
 
 interface Step2VerifyProps {
   extractedText: string;
@@ -13,6 +45,7 @@ interface Step2VerifyProps {
   onExperienceLevelChange: (level: ExperienceLevel) => void;
   onReview: (resumeText: string, jobDescription: string, level: ExperienceLevel) => void;
   onBack: () => void;
+  appliedRanges: AppliedRange[];
 }
 
 export function Step2Verify({
@@ -26,8 +59,17 @@ export function Step2Verify({
   onExperienceLevelChange,
   onReview,
   onBack,
+  appliedRanges,
 }: Step2VerifyProps) {
   const wordCount = resumeText.trim().split(/\s+/).filter(Boolean).length;
+  const overlayInnerRef = useRef<HTMLDivElement>(null);
+  const hasHighlights = appliedRanges.length > 0;
+
+  const handleResumeScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    if (overlayInnerRef.current) {
+      overlayInnerRef.current.style.transform = `translateY(-${e.currentTarget.scrollTop}px)`;
+    }
+  };
 
   const canReview = resumeText.trim().length >= 200 && jobDescription.trim().length >= 50;
 
@@ -64,13 +106,24 @@ export function Step2Verify({
             </ul>
           )}
 
-          <textarea
-            className={styles.textarea}
-            value={resumeText}
-            onChange={(e) => onResumeTextChange(e.target.value)}
-            aria-label="Extracted resume text"
-            spellCheck={false}
-          />
+          <div className={styles.textareaWrapper}>
+            <textarea
+              className={styles.textarea}
+              value={resumeText}
+              onChange={(e) => onResumeTextChange(e.target.value)}
+              onScroll={handleResumeScroll}
+              aria-label="Extracted resume text"
+              spellCheck={false}
+              style={hasHighlights ? { color: 'transparent', caretColor: 'var(--color-text)', background: 'transparent' } : undefined}
+            />
+            {hasHighlights && (
+              <div className={styles.textareaOverlay} aria-hidden="true">
+                <div ref={overlayInnerRef}>
+                  {renderHighlightedText(resumeText, appliedRanges)}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className={styles.textareaFooter}>
             <span className={styles.wordCount}>{wordCount} words</span>

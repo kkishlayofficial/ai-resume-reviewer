@@ -10,9 +10,10 @@ interface ScoreCardProps {
   label: string;
   score: number;
   reasoning: string;
+  delta?: number;
 }
 
-function ScoreCard({ label, score, reasoning }: ScoreCardProps) {
+function ScoreCard({ label, score, reasoning, delta }: ScoreCardProps) {
   const color =
     score >= 90 ? '#16A34A' : score >= 75 ? '#2563EB' : score >= 50 ? '#D97706' : '#DC2626';
 
@@ -20,9 +21,20 @@ function ScoreCard({ label, score, reasoning }: ScoreCardProps) {
     <div className={styles.scoreCard}>
       <div className={styles.scoreCardTop}>
         <span className={styles.scoreCardLabel}>{label}</span>
-        <span className={styles.scoreCardValue} style={{ color }}>
-          {score}
-        </span>
+        <div className={styles.scoreValueGroup}>
+          <span className={styles.scoreCardValue} style={{ color }}>
+            {score}
+          </span>
+          {delta != null && delta !== 0 && (
+            <span
+              className={`${styles.scoreDeltaBadge} ${
+                delta > 0 ? styles.scoreDeltaBadgePos : styles.scoreDeltaBadgeNeg
+              }`}
+            >
+              {delta > 0 ? '+' : ''}{delta}
+            </span>
+          )}
+        </div>
       </div>
       <div className={styles.scoreCardBar}>
         <div className={styles.scoreBarTrack}>
@@ -39,11 +51,23 @@ function ScoreCard({ label, score, reasoning }: ScoreCardProps) {
 
 interface Step3DashboardProps {
   result: ResumeReviewResponse;
+  baselineResult: ResumeReviewResponse | null;
+  appliedRecommendations: number[];
+  onApplyRecommendation: (index: number) => void;
+  onReEvaluate: () => void;
   onReset: () => void;
   handleDownloadReport: () => void;
 }
 
-export function Step3Dashboard({ result, onReset, handleDownloadReport }: Step3DashboardProps) {
+export function Step3Dashboard({
+  result,
+  baselineResult,
+  appliedRecommendations,
+  onApplyRecommendation,
+  onReEvaluate,
+  onReset,
+  handleDownloadReport,
+}: Step3DashboardProps) {
   const {
     overall_score,
     ats_score,
@@ -58,6 +82,12 @@ export function Step3Dashboard({ result, onReset, handleDownloadReport }: Step3D
     job_fit,
   } = result;
 
+  const overallDelta = baselineResult ? overall_score - baselineResult.overall_score : null;
+  const atsDelta = baselineResult ? ats_score.score - baselineResult.ats_score.score : undefined;
+  const techDelta = baselineResult ? technical_score.score - baselineResult.technical_score.score : undefined;
+  const commDelta = baselineResult ? communication_score.score - baselineResult.communication_score.score : undefined;
+  const hasApplied = appliedRecommendations.length > 0;
+
   return (
     <div className={styles.dashboard}>
       {/* ── Header ─────────────────────────────────────────────────────── */}
@@ -71,8 +101,20 @@ export function Step3Dashboard({ result, onReset, handleDownloadReport }: Step3D
         <div className={styles.overallInner}>
           <CircularScore score={overall_score} size={160} strokeWidth={12} />
           <div className={styles.overallInfo}>
-            <h3 className={styles.overallLabel}>Overall Score</h3>
-            <p className={styles.overallDesc}>
+            <h3 className={styles.overallLabel}>Overall Score</h3>            {overallDelta !== null && overallDelta !== 0 && (
+              <div className={styles.overallDeltaRow}>
+                <span className={styles.overallDeltaFrom}>{baselineResult!.overall_score}</span>
+                <span className={styles.overallDeltaArrow}>→</span>
+                <span className={styles.overallDeltaTo}>{overall_score}</span>
+                <span
+                  className={`${styles.overallDeltaPill} ${
+                    overallDelta > 0 ? styles.overallDeltaPillPos : styles.overallDeltaPillNeg
+                  }`}
+                >
+                  {overallDelta > 0 ? '+' : ''}{overallDelta}
+                </span>
+              </div>
+            )}            <p className={styles.overallDesc}>
               Weighted score — 30% ATS · 50% Technical · 20% Communication
             </p>
           </div>
@@ -81,9 +123,9 @@ export function Step3Dashboard({ result, onReset, handleDownloadReport }: Step3D
 
       {/* ── 3 Score Cards ────────────────────────────────────────────── */}
       <div className={styles.scoreGrid}>
-        <ScoreCard label="ATS Score" score={ats_score.score} reasoning={ats_score.reasoning} />
-        <ScoreCard label="Technical Score" score={technical_score.score} reasoning={technical_score.reasoning} />
-        <ScoreCard label="Communication Score" score={communication_score.score} reasoning={communication_score.reasoning} />
+        <ScoreCard label="ATS Score" score={ats_score.score} reasoning={ats_score.reasoning} delta={atsDelta} />
+        <ScoreCard label="Technical Score" score={technical_score.score} reasoning={technical_score.reasoning} delta={techDelta} />
+        <ScoreCard label="Communication Score" score={communication_score.score} reasoning={communication_score.reasoning} delta={commDelta} />
       </div>
 
       {/* ── Summary ───────────────────────────────────────────────────── */}
@@ -159,19 +201,81 @@ export function Step3Dashboard({ result, onReset, handleDownloadReport }: Step3D
         </div>
       </Card>
 
-      {/* ── Recommendations ───────────────────────────────────────────── */}
+      {/* ── Actionable Improvements ──────────────────────────────────────────────────── */}
       <Card shadow="sm" className={styles.section}>
-        <h3 className={styles.sectionTitle}>Recommendations</h3>
+        <div className={styles.recSectionHeader}>
+          <h3 className={styles.sectionTitle}>Actionable Improvements</h3>
+          {appliedRecommendations.length > 0 && (
+            <span className={styles.appliedCounter}>
+              Applied: {appliedRecommendations.length}/{recommendations.length}
+            </span>
+          )}
+        </div>
         <div className={styles.recList}>
-          {recommendations.map((rec, i) => (
-            <div key={i} className={styles.recCard}>
-              <div className={styles.recHeader}>
-                <Badge priority={rec.priority} />
-                <h4 className={styles.recTitle}>{rec.title}</h4>
+          {recommendations.map((rec, i) => {
+            const isApplied = appliedRecommendations.includes(i);
+            const canApply = rec.action !== 'replace';
+            return (
+              <div
+                key={i}
+                className={`${styles.recCard} ${isApplied ? styles.recCardApplied : ''}`}
+              >
+                <div className={styles.recHeader}>
+                  <Badge priority={rec.priority} />
+                  <h4 className={styles.recTitle}>{rec.title}</h4>
+                  {rec.section && (
+                    <span className={styles.recSectionTag}>
+                      {rec.section.charAt(0).toUpperCase() + rec.section.slice(1)}
+                    </span>
+                  )}
+                </div>
+
+                <div className={styles.recContentBox}>
+                  <span className={styles.recContentLabel}>
+                    {rec.action === 'replace' ? 'Suggested Update' : 'Suggested Content'}
+                  </span>
+                  <pre className={styles.recContent}>{rec.suggested_content}</pre>
+                </div>
+
+                <p className={styles.recReasoning}>
+                  <span className={styles.recReasoningLabel}>Reason: </span>
+                  {rec.reasoning}
+                </p>
+
+                <div className={styles.recFooter}>
+                  {canApply ? (
+                    isApplied ? (
+                      <span className={styles.recAppliedBadge}>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                          <circle cx="6" cy="6" r="6" fill="#16A34A" />
+                          <path d="M3 6l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Applied
+                      </span>
+                    ) : (
+                      <button
+                        className={styles.recAddBtn}
+                        onClick={() => onApplyRecommendation(i)}
+                        aria-label={`Add to resume: ${rec.title}`}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                          <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
+                        Add to Resume
+                      </button>
+                    )
+                  ) : (
+                    <span className={styles.recManualNote}>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                        <path d="M8.5 1.5l2 2L4 10H2v-2L8.5 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Update manually in Step 2
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className={styles.recText}>{rec.recommendation}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
 
@@ -200,10 +304,15 @@ export function Step3Dashboard({ result, onReset, handleDownloadReport }: Step3D
 
       {/* ── Actions ───────────────────────────────────────────────────── */}
       <div className={styles.dashActions}>
+        {hasApplied && (
+          <Button variant="primary" size="lg" onClick={onReEvaluate}>
+            Re-evaluate Resume
+          </Button>
+        )}
         <Button variant="secondary" size="lg" onClick={handleDownloadReport}>
           Download Report
         </Button>
-        <Button variant="primary" size="lg" onClick={onReset}>
+        <Button variant={hasApplied ? 'secondary' : 'primary'} size="lg" onClick={onReset}>
           Review Another Resume
         </Button>
       </div>

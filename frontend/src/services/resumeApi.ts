@@ -104,33 +104,43 @@ const MOCK_REVIEW_RESPONSE: ResumeReviewResponse = {
   recommendations: [
     {
       priority: "high",
-      title: "Add CI/CD and DevOps tooling experience",
-      recommendation:
-        'The job description explicitly requires CI/CD pipeline experience. Add specific examples: "Configured GitHub Actions pipelines for automated testing and deployment" or reference any Jenkins/CircleCI work from your experience.',
+      title: "Add CI/CD Pipeline Experience",
+      section: "experience",
+      action: "append",
+      suggested_content: "• Configured GitHub Actions pipelines for automated testing, linting, and deployment across 3 microservices, reducing release cycle time by 35%.",
+      reasoning: "The job description explicitly lists CI/CD pipeline experience as a requirement. Adding a concrete example from your work history will directly address this gap.",
     },
     {
       priority: "high",
-      title: "Include Docker containerization references",
-      recommendation:
-        "Docker is listed as a required skill. If you have Docker experience, add it to your skills section and reference containerized development environments in your project descriptions.",
+      title: "Include Docker in Skills",
+      section: "skills",
+      action: "append",
+      suggested_content: "Docker",
+      reasoning: "Docker is listed as a required skill in the job description and is currently absent from your skills section.",
     },
     {
       priority: "medium",
-      title: "Mention micro-frontend or module federation experience",
-      recommendation:
-        "The role mentions micro-frontend architecture. Add any experience with Webpack Module Federation, single-spa, or independent team deployments to strengthen your technical alignment.",
+      title: "Add Micro-Frontend Architecture Experience",
+      section: "experience",
+      action: "append",
+      suggested_content: "• Evaluated and prototyped Webpack Module Federation for independent team deployments, enabling parallel feature releases across 3 product squads.",
+      reasoning: "The role mentions micro-frontend architecture. Adding an experience bullet that references Module Federation or independent deployments strengthens your technical alignment.",
     },
     {
       priority: "medium",
-      title: "Quantify the component library adoption metrics",
-      recommendation:
-        "Your component library work is strong but could include usage metrics: number of components, teams using it, bundle size improvements, or design system coverage percentage.",
+      title: "Quantify Component Library Adoption",
+      section: "experience",
+      action: "replace",
+      suggested_content: "Current: Architected and led development of a component library used across 5 product teams, reducing UI development time by 40%\nSuggested: Architected and led development of a 60+ component design system adopted across 5 product teams (200+ engineers), reducing UI development time by 40% and cutting design-to-production cycle from 2 weeks to 3 days.",
+      reasoning: "Quantifying the scale of the component library (number of components, engineers impacted) makes the achievement more compelling for a senior engineering role.",
     },
     {
       priority: "low",
-      title: "Add a cloud platform skill",
-      recommendation:
-        "Even basic AWS S3/CloudFront or Vercel/Netlify deployment experience is worth mentioning as it completes the full deployment lifecycle picture for a senior engineer.",
+      title: "Add Cloud Platform Skills",
+      section: "skills",
+      action: "append",
+      suggested_content: "AWS (S3, CloudFront), Vercel",
+      reasoning: "Even basic cloud deployment experience rounds out the full-stack deployment lifecycle picture expected of a senior engineer and addresses a gap noted in the job description.",
     },
   ],
   job_fit: {

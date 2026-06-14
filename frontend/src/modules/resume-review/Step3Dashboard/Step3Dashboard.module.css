@@ -198,6 +198,198 @@
   gap: var(--space-3);
 }
 
+/* ── Score value group (value + delta badge) ────────────────────────────── */
+.scoreValueGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.scoreDeltaBadge {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  line-height: 1.4;
+}
+
+.scoreDeltaBadgePos {
+  color: #16A34A;
+  background-color: #DCFCE7;
+}
+
+.scoreDeltaBadgeNeg {
+  color: #DC2626;
+  background-color: #FEE2E2;
+}
+
+/* ── Overall score delta row ────────────────────────────────────────────── */
+.overallDeltaRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.overallDeltaFrom {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-muted);
+  text-decoration: line-through;
+}
+
+.overallDeltaArrow {
+  font-size: var(--font-size-base);
+  color: var(--color-muted);
+}
+
+.overallDeltaTo {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.overallDeltaPill {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+}
+
+.overallDeltaPillPos {
+  color: #16A34A;
+  background-color: #DCFCE7;
+}
+
+.overallDeltaPillNeg {
+  color: #DC2626;
+  background-color: #FEE2E2;
+}
+
+/* ── Recommendations section header ─────────────────────────────────────── */
+.recSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.appliedCounter {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: #16A34A;
+  background-color: #DCFCE7;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+/* ── Recommendation card ────────────────────────────────────────────────── */
+.recCardApplied {
+  border-color: #BBF7D0 !important;
+  background-color: #F0FDF4 !important;
+}
+
+.recSectionTag {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-muted);
+  background-color: var(--color-bg-muted);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.recContentBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.recContentLabel {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.recContent {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: var(--line-height-relaxed);
+  margin: 0;
+}
+
+.recReasoning {
+  font-size: var(--font-size-xs);
+  color: var(--color-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+.recReasoningLabel {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.recFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-1);
+}
+
+.recAddBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background-color: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--transition-base), transform 0.1s ease;
+  font-family: var(--font-family);
+  line-height: 1;
+}
+
+.recAddBtn:hover {
+  background-color: #1d4ed8;
+}
+
+.recAddBtn:active {
+  transform: scale(0.97);
+}
+
+.recAppliedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: #16A34A;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.recManualNote {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-muted);
+  font-size: var(--font-size-xs);
+  font-style: italic;
+}
+
 .recCard {
   background-color: var(--color-bg-subtle);
   border: 1px solid var(--color-border);

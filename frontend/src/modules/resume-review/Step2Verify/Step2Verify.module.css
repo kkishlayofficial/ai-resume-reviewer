@@ -87,11 +87,49 @@
   min-height: 600px;
   transition: border-color var(--transition-base);
   outline: none;
+  position: relative;
+  z-index: 1;
 }
 
 .textarea:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+/* ── Textarea highlight overlay ────────────────────────────────────────── */
+.textareaWrapper {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+/* The overlay is inset by the textarea border-width (1.5px) so text aligns */
+.textareaOverlay {
+  position: absolute;
+  top: 1.5px;
+  left: 1.5px;
+  right: 1.5px;
+  bottom: 1.5px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  padding: var(--space-4);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  line-height: var(--line-height-relaxed);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  border-radius: calc(var(--radius-md) - 1.5px);
+}
+
+.highlightMark {
+  background-color: #DCFCE7;
+  border-radius: 2px;
+  color: #14532D;
+  padding: 0;
 }
 
 .textareaFooter {
