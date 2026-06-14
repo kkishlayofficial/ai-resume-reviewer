@@ -269,7 +269,7 @@ export function Step3Dashboard({
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                         <path d="M8.5 1.5l2 2L4 10H2v-2L8.5 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
-                      Update manually in Step 2
+                      Update manually in Step 2
                     </span>
                   )}
                 </div>
