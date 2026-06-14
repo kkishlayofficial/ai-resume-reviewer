@@ -41,11 +41,6 @@ export function Navbar({ onReviewClick, theme, onToggleTheme }: NavbarProps) {
               How It Works
             </a>
           </li>
-          <li>
-            <a href="#pricing" className={styles.navLink}>
-              Pricing
-            </a>
-          </li>
         </ul>
 
         {/* Right actions */}
