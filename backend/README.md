@@ -28,8 +28,7 @@ backend/
 ├── main.py                  # FastAPI app setup, CORS middleware
 ├── requirements.txt
 ├── routes/
-│   ├── resume.py            # /resume/extract, /resume/review, /resume/report endpoints
-│   └── chat.py              # Placeholder — not implemented yet
+│   └── resume.py            # /resume/extract, /resume/review, /resume/report endpoints
 ├── schemas/
 │   └── resume.py            # Pydantic models for request/response contracts
 ├── services/
@@ -37,8 +36,7 @@ backend/
 │   ├── resume_service.py      # Orchestrates extraction → validation → LLM → scoring
 │   ├── llm_service.py         # Groq API calls (review + resume validation)
 │   ├── score_service.py       # Weighted overall score calculation
-│   ├── report_service.py      # ReportLab PDF report generation
-│   └── chat_service.py        # Placeholder — not implemented yet
+│   └── report_service.py      # ReportLab PDF report generation
 └── prompts/
     └── resume.py              # System prompts for review and resume validation
 ```
@@ -179,9 +177,6 @@ The server allows requests only from `http://localhost:5173` and `http://127.0.0
 ### Authentication & Security
 - **No authentication.** Any client that can reach the server can submit requests. There is no API key, user session, or rate limiting at the application level.
 - **No file size enforcement beyond content validation.** There is no `Content-Length` check before reading the file into memory. Very large uploads are read entirely before being rejected.
-
-### Chat Feature
-- `routes/chat.py` and `services/chat_service.py` are empty placeholders. The chat functionality is not implemented.
 
 ### Deployment
 - CORS is locked to localhost origins. Production deployment requires updating `allow_origins`.

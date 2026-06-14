@@ -165,5 +165,4 @@ All scores are integers from 0–100. The LLM evaluates against the selected exp
 - Scanned PDFs (image-embedded) return empty text and fail validation
 - No authentication or rate limiting at the application level
 - Groq free tier has strict TPM limits — large resumes with long job descriptions may hit rate limit errors
-- No chat feature (placeholders exist in both backend and frontend)
 - No session history — only the current session is stored

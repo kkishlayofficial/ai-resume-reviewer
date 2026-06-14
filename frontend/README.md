@@ -174,9 +174,6 @@ The app supports light and dark mode. The active theme is stored in `localStorag
 - **No share link.** There is no way to generate a shareable URL or copy results to the clipboard.
 - **No history.** Each session is stateless. Previous analyses are not stored and cannot be retrieved.
 
-### Chat Feature
-- The chat routes and services exist in the backend as empty placeholders. There is no chat interface in the frontend. The planned feature of conversational follow-up questions about the review result is not implemented.
-
 ### API & Error Handling
 - **Generic error messages.** API errors display the backend's `detail` string directly (or a fallback message). There is no differentiation between network errors, rate limit errors (HTTP 429), and validation errors (HTTP 400) — the user sees a single error banner without guidance on what to do.
 - **No retry mechanism.** If the API call fails due to a transient error (timeout, rate limit), the user must manually click the button again.

@@ -78,9 +78,6 @@ export function Navbar({ onReviewClick, theme, onToggleTheme }: NavbarProps) {
               )}
             </button>
           )}
-          <Button variant="ghost" size="sm">
-            Login
-          </Button>
           <Button
             variant="primary"
             size="sm"
