@@ -67,11 +67,16 @@ ai-resume-reviewer/
 ├── backend/          # FastAPI + Python
 │   ├── main.py
 │   ├── requirements.txt
+│   ├── vercel.json
+│   ├── .python-version
+│   ├── api/
+│   │   └── index.py          # Vercel serverless entrypoint
 │   ├── routes/
 │   ├── schemas/
 │   ├── services/
 │   └── prompts/
 ├── frontend/         # React + TypeScript + Vite
+│   ├── vercel.json
 │   ├── src/
 │   │   ├── components/
 │   │   ├── modules/
@@ -123,8 +128,9 @@ source venv/bin/activate      # Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Create .env with your Groq API key
-echo "GROQ_API_KEY=your_key_here" > .env
+# Copy the example env file and fill in your key
+cp .env.example .env
+# Edit .env and set GROQ_API_KEY
 
 # Start the server
 uvicorn main:app --reload
@@ -142,6 +148,9 @@ cd frontend
 # Install dependencies
 npm install
 
+# Copy the example env file (default points to localhost:8000)
+cp .env.example .env
+
 # Start the dev server
 npm run dev
 ```
@@ -149,6 +158,40 @@ npm run dev
 The app runs at `http://localhost:5173`.
 
 > **Mock mode:** `src/services/resumeApi.ts` has a `MOCK_MODE = true` flag. When enabled, all API calls return hardcoded sample data with simulated delays — useful for UI development without a running backend. Set it to `false` to use the real backend.
+
+---
+
+## Deployment
+
+Both services are deployed separately on Vercel.
+
+| Service | Live URL |
+|---|---|
+| Frontend | https://ai-resume-reviewer-rho-rust.vercel.app |
+| Backend | https://ai-resume-reviewer-be.vercel.app |
+
+### Deploy the backend
+
+1. Import the repo into a new Vercel project → set **Root Directory** to `backend`
+2. Vercel detects `vercel.json` automatically and uses `@vercel/python`
+3. Add environment variables in project settings:
+   ```
+   GROQ_API_KEY     = your_groq_api_key
+   ALLOWED_ORIGINS  = https://your-frontend.vercel.app
+   ```
+4. Deploy
+
+### Deploy the frontend
+
+1. Import the repo into a separate Vercel project → set **Root Directory** to `frontend`
+2. Framework preset: **Vite**
+3. Add environment variable:
+   ```
+   VITE_API_BASE_URL = https://your-backend.vercel.app
+   ```
+4. Deploy
+
+> `vercel.json` in both directories handles all routing (`rewrites` for the SPA, and the serverless function entrypoint for the API). No additional Vercel configuration is needed.
 
 ---
 
@@ -201,3 +244,4 @@ All scores are integers from 0–100. The LLM evaluates against the selected exp
 - Groq free tier has strict TPM limits — large resumes with long job descriptions may hit rate limit errors
 - No session history — only the current session is stored
 - Text patching relies on section header detection via keyword matching — non-standard section headings may fall back to end-of-document append
+- Vercel Python serverless functions have a cold start on first request after inactivity (~1–3s on free tier)

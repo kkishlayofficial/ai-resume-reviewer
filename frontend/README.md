@@ -23,6 +23,8 @@ A React + TypeScript single-page application that guides users through a 3-step 
 frontend/
 ├── index.html
 ├── vite.config.ts
+├── vercel.json              # SPA rewrites for Vercel
+├── .env.example             # Environment variable template
 ├── src/
 │   ├── App.tsx                    # Root component — renders Navbar, Hero, Features,
 │   │                              #   HowItWorks, ResumeReview, Footer
@@ -95,7 +97,14 @@ The `phase` field in `ResumeReview`'s state drives which component is mounted. T
 ### Install and run
 ```bash
 cd frontend
+
+# Install dependencies
 npm install
+
+# Copy the example env file (default points to localhost:8000)
+cp .env.example .env
+
+# Start the dev server
 npm run dev
 ```
 The dev server starts at `http://localhost:5173`.
@@ -110,6 +119,16 @@ npm run preview     # Preview the production build locally
 ```bash
 npm run lint
 ```
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_API_BASE_URL` | No | Backend API base URL. Defaults to `http://localhost:8000`. Set to your deployed backend URL in production. |
+
+Copy `.env.example` to `.env` for local development. For Vercel, set variables in the project settings — they are injected at build time.
 
 ---
 
@@ -146,8 +165,10 @@ All session state is persisted to `localStorage` so a page refresh does not lose
 
 **What doesn’t survive:**
 - In-flight phases (`extracting`, `reviewing`) — normalized back to the preceding stable phase on load
-- Transient error messages- Applied highlight ranges (`appliedRanges`) — these are positional and would be stale after a refresh; cards still show ✓ Applied state via the persisted `appliedRecommendations` index array
+- Transient error messages
+- Applied highlight ranges (`appliedRanges`) — these are positional and would be stale after a refresh; cards still show ✓ Applied state via the persisted `appliedRecommendations` index array
 - Persisted review results from before the new schema (missing `section`/`action` fields) — automatically wiped on load to prevent crashes
+
 Calling **Start Over** (reset) removes both storage keys.
 
 If the file is too large and writing to localStorage would exceed the quota, the file persistence step fails silently — all other state is still saved.
@@ -198,68 +219,8 @@ The app supports light and dark mode. The active theme is stored in `localStorag
 - There are no unit tests, integration tests, or end-to-end tests. The `MOCK_MODE` flag serves as a manual testing convenience but is not tied to any automated test suite.
 
 ### Deployment
-- The backend URL is hardcoded to `http://localhost:8000` in `resumeApi.ts`. Deploying to a non-local environment requires a code change (or an environment variable approach using `import.meta.env`).
-- No CI/CD pipeline or build configuration for hosting platforms is included.
+- Deployed on Vercel. Live URL: **https://ai-resume-reviewer-rho-rust.vercel.app**
+- `vercel.json` rewrites all routes to `/index.html` to support client-side routing (SPA behaviour).
+- The backend URL is configured via `VITE_API_BASE_URL` — set this in Vercel project environment variables; no code changes needed.
 
 ---
-
-## Original Vite Template Notes
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```

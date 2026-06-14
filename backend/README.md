@@ -27,6 +27,11 @@ A FastAPI backend that accepts resume files, extracts their text content, and se
 backend/
 ├── main.py                  # FastAPI app setup, CORS middleware
 ├── requirements.txt
+├── vercel.json              # Vercel deployment config (rewrites → api/index)
+├── .python-version          # Pins Python 3.12 for Vercel
+├── .env.example             # Environment variable template
+├── api/
+│   └── index.py             # Vercel serverless entrypoint (re-exports app from main.py)
 ├── routes/
 │   └── resume.py            # /resume/extract, /resume/review, /resume/report endpoints
 ├── schemas/
@@ -144,11 +149,15 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configure environment variables
-Create a `.env` file in the `backend/` directory:
+Copy the example file and fill in your values:
+```bash
+cp .env.example .env
 ```
-GROQ_API_KEY=your_groq_api_key_here
-```
-Obtain a free API key at [console.groq.com](https://console.groq.com).
+
+| Variable | Required | Description |
+|---|---|---|
+| `GROQ_API_KEY` | Yes | Obtain at [console.groq.com](https://console.groq.com) |
+| `ALLOWED_ORIGINS` | No | Comma-separated frontend origins. Defaults to `http://localhost:5173,http://127.0.0.1:5173`. Set to your Vercel frontend URL in production. |
 
 ### 4. Run the development server
 ```bash
@@ -158,9 +167,33 @@ The server starts at `http://localhost:8000`.
 
 ---
 
+## Deployment (Vercel)
+
+The backend is deployed as a Python serverless function on Vercel.
+
+Live URL: **https://ai-resume-reviewer-be.vercel.app**
+
+### How it works
+- `api/index.py` re-exports the FastAPI `app` from `main.py` — Vercel treats any file inside `api/` as a serverless function entrypoint
+- `vercel.json` rewrites all requests (`/.*`) to `/api/index`
+- `.python-version` pins Python 3.12
+
+### Deploy steps
+1. Import the repo into Vercel → set **Root Directory** to `backend`
+2. Add environment variables in Vercel project settings:
+   ```
+   GROQ_API_KEY     = your_groq_api_key
+   ALLOWED_ORIGINS  = https://your-frontend.vercel.app
+   ```
+3. Deploy — Vercel auto-detects `vercel.json`
+
+---
+
 ## CORS
 
-The server allows requests only from `http://localhost:5173` and `http://127.0.0.1:5173` (the Vite dev server). To deploy to a different origin, update `allow_origins` in `main.py`.
+Allowed origins are configured via the `ALLOWED_ORIGINS` environment variable (comma-separated list). The default value is `http://localhost:5173,http://127.0.0.1:5173` for local development.
+
+In production, set `ALLOWED_ORIGINS` to your deployed frontend URL (e.g. `https://your-frontend.vercel.app`) in the Vercel project environment variables.
 
 ---
 
@@ -190,6 +223,7 @@ The server allows requests only from `http://localhost:5173` and `http://127.0.0
 - **No file size enforcement beyond content validation.** There is no `Content-Length` check before reading the file into memory. Very large uploads are read entirely before being rejected.
 
 ### Deployment
-- CORS is locked to localhost origins. Production deployment requires updating `allow_origins`.
-- No environment-specific config management beyond a single `.env` file.
-- No Docker setup or deployment configuration is provided.
+- Deployed on Vercel using `@vercel/python` via the `api/index.py` serverless entrypoint.
+- CORS origins are controlled via the `ALLOWED_ORIGINS` environment variable — no code changes needed for new deployments.
+- Python version is pinned via `.python-version`.
+- Vercel Python serverless functions have a cold start on first request after inactivity (~1–3s on free tier).
