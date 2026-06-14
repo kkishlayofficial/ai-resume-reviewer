@@ -17,3 +17,8 @@ app.add_middleware(
 )
 
 app.include_router(route)
+
+
+@app.get("/")
+def root():
+    return {"message": "Backend running"}
