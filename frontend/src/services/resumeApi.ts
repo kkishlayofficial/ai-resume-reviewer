@@ -7,7 +7,7 @@ import type {
 // ─── Toggle between mock and real API ────────────────────────────────────────
 export const MOCK_MODE = false;
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const MOCK_EXTRACTED_TEXT = `John Smith
