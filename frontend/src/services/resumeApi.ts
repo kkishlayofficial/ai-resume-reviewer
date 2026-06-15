@@ -207,6 +207,23 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const STATUS_MESSAGES: Record<number, string> = {
+  400: "The request was invalid. Please check your input and try again.",
+  401: "Authentication failed. Please check your API configuration.",
+  403: "Access denied. Please check your API configuration.",
+  413: "The file is too large. Please upload a smaller file.",
+  422: "The uploaded file could not be processed. Please ensure it is a valid resume.",
+  429: "The AI service is currently busy. Please wait a moment and try again.",
+  500: "Something went wrong on our end. Please try again.",
+  502: "The AI service returned an unexpected response. Please try again.",
+  503: "The AI service is temporarily unavailable. Please try again shortly.",
+  504: "The AI service took too long to respond. Please try again.",
+};
+
+function friendlyError(status: number, fallback: string): Error {
+  return new Error(STATUS_MESSAGES[status] ?? fallback);
+}
+
 // ─── extractResume ────────────────────────────────────────────────────────────
 export async function extractResume(
   file: File,
@@ -228,10 +245,7 @@ export async function extractResume(
   });
 
   if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: "Extraction failed" }));
-    throw new Error(error.detail ?? "Failed to extract resume");
+    throw friendlyError(response.status, "Failed to extract resume. Please try again.");
   }
 
   return response.json() as Promise<ResumeExtractionResponse>;
@@ -253,10 +267,7 @@ export async function parseResume(
   });
 
   if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: "Parse failed" }));
-    throw new Error(error.detail ?? "Failed to parse resume structure");
+    throw friendlyError(response.status, "Failed to parse resume structure. Please try again.");
   }
 
   return response.json() as Promise<ParseResumeResponse>;
@@ -278,10 +289,7 @@ export async function reviewResume(
   });
 
   if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: "Review failed" }));
-    throw new Error(error.detail ?? "Failed to review resume");
+    throw friendlyError(response.status, "Failed to review resume. Please try again.");
   }
 
   return response.json() as Promise<ResumeReviewResponse>;
@@ -295,10 +303,7 @@ export async function getReport(reviewResult: ResumeReviewResponse): Promise<Res
   });
 
   if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: "Report generation failed" }));
-    throw new Error(error.detail ?? "Failed to generate report");
+    throw friendlyError(response.status, "Failed to generate report. Please try again.");
   }
 
   return response;
@@ -322,10 +327,7 @@ export async function downloadResume(
   });
 
   if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: "Download failed" }));
-    throw new Error(error.detail ?? "Failed to download resume");
+    throw friendlyError(response.status, "Failed to download resume. Please try again.");
   }
 
   const blob = await response.blob();

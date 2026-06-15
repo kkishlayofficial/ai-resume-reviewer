@@ -328,6 +328,21 @@ export function Step3Dashboard({
         <p className={styles.jobFitExplanation}>{job_fit.explanation}</p>
       </div>
 
+      {/* ── Actions ───────────────────────────────────────────────────── */}
+      <div className={styles.dashActions}>
+        {hasApplied && (
+          <Button variant="primary" size="lg" onClick={onReEvaluate}>
+            Re-evaluate Resume
+          </Button>
+        )}
+        <Button variant="secondary" size="lg" onClick={handleDownloadReport}>
+          Download Report
+        </Button>
+        <Button variant={hasApplied ? 'secondary' : 'primary'} size="lg" onClick={onReset}>
+          Review Another Resume
+        </Button>
+      </div>
+
       {/* ── Download Updated Resume ───────────────────────────────────── */}
       <Card shadow="sm" className={styles.section}>
         <div className={styles.downloadResumeSection}>
@@ -365,21 +380,6 @@ export function Step3Dashboard({
           </div>
         </div>
       </Card>
-
-      {/* ── Actions ───────────────────────────────────────────────────── */}
-      <div className={styles.dashActions}>
-        {hasApplied && (
-          <Button variant="primary" size="lg" onClick={onReEvaluate}>
-            Re-evaluate Resume
-          </Button>
-        )}
-        <Button variant="secondary" size="lg" onClick={handleDownloadReport}>
-          Download Report
-        </Button>
-        <Button variant={hasApplied ? 'secondary' : 'primary'} size="lg" onClick={onReset}>
-          Review Another Resume
-        </Button>
-      </div>
     </div>
   );
 }

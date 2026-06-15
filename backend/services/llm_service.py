@@ -11,6 +11,18 @@ load_dotenv()
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
+# Ordered list of models to try for structured JSON output tasks.
+# The first model is the primary; subsequent models are fallbacks.
+GROQ_MODELS: list[str] = [
+    "openai/gpt-oss-120b",
+    "meta-llama/llama-4-maverick-17b-128e-instruct",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "llama-3.3-70b-versatile",
+]
+
+# Auth errors mean the API key is invalid — no point trying other models.
+_AUTH_ERROR_CODES = {401, 403}
+
 
 def make_strict_schema(schema: dict) -> dict:
     """
@@ -50,6 +62,46 @@ def make_strict_schema(schema: dict) -> dict:
     return schema
 
 
+def _chat_with_fallback(
+    messages: list[dict],
+    schema_name: str,
+    schema: dict,
+    max_tokens: int,
+):
+    """
+    Attempt a structured-output chat completion using each model in GROQ_MODELS.
+    Falls through to the next model on rate-limit (429), overload (503), timeout,
+    or unsupported-feature (400) errors. Auth errors (401/403) are re-raised
+    immediately. Raises the last encountered exception if all models fail.
+    """
+    last_exc: Exception | None = None
+    for model in GROQ_MODELS:
+        try:
+            return client.chat.completions.create(
+                messages=messages,
+                model=model,
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": schema_name,
+                        "strict": True,
+                        "schema": schema,
+                    },
+                },
+                temperature=0,
+                max_completion_tokens=max_tokens,
+            )
+        except APIConnectionError:
+            raise  # Network is down — no point trying other models
+        except APIStatusError as e:
+            if e.status_code in _AUTH_ERROR_CODES:
+                raise  # Invalid API key — fail fast
+            last_exc = e
+        except APITimeoutError as e:
+            last_exc = e
+    raise last_exc  # type: ignore[misc]
+
+
 def generate_resume_review(
     system_prompt: str, user_prompt: str
 ) -> ResumeReviewAIOutput:
@@ -60,22 +112,12 @@ def generate_resume_review(
             {"role": "user", "content": user_prompt},
         ]
 
-        response = client.chat.completions.create(
+        response = _chat_with_fallback(
             messages=messages,
-            model="openai/gpt-oss-120b",
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "ResumeReviewAIOutput",
-                    "strict": True,
-                    "schema": make_strict_schema(ResumeReviewAIOutput.model_json_schema()),
-                },
-            },
-            temperature=0,
-            max_completion_tokens=3000,
+            schema_name="ResumeReviewAIOutput",
+            schema=make_strict_schema(ResumeReviewAIOutput.model_json_schema()),
+            max_tokens=3000,
         )
-
-        
 
         results = json.loads(response.choices[0].message.content)
         return ResumeReviewAIOutput.model_validate(results)
@@ -103,19 +145,11 @@ def parse_resume(extracted_text: str) -> Resume:
             {"role": "user", "content": extracted_text},
         ]
 
-        response = client.chat.completions.create(
+        response = _chat_with_fallback(
             messages=messages,
-            model="openai/gpt-oss-120b",
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "Resume",
-                    "strict": True,
-                    "schema": make_strict_schema(Resume.model_json_schema()),
-                },
-            },
-            temperature=0,
-            max_completion_tokens=4000,
+            schema_name="Resume",
+            schema=make_strict_schema(Resume.model_json_schema()),
+            max_tokens=4000,
         )
 
         results = json.loads(response.choices[0].message.content)
