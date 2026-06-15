@@ -39,9 +39,24 @@ Step 3 — Dashboard
 
 All state is persisted to `localStorage` — a page refresh never loses progress.
 
----
+## Resilience & Error Handling
 
-## Actionable Improvements
+### Multi-Model Fallback (Backend)
+The LLM service implements automatic model fallback for structured JSON output tasks. If a model is rate-limited, overloaded, or doesn't support strict JSON schema, the backend automatically retries with the next model in the priority list:
+1. `openai/gpt-oss-120b` (primary)
+2. `meta-llama/llama-4-maverick-17b-128e-instruct`
+3. `meta-llama/llama-4-scout-17b-16e-instruct`
+4. `llama-3.3-70b-versatile`
+
+Auth errors (401/403) fail fast; network errors (connection failures) are not retried. The last encountered error is raised if all models fail.
+
+### User-Friendly Error Messages (Frontend)
+HTTP errors from the backend are mapped to clear, actionable user messages instead of exposing raw API details. For example:
+- `503` → "The AI service is temporarily unavailable. Please try again shortly."
+- `429` → "The AI service is currently busy. Please wait a moment and try again."
+- `504` → "The AI service took too long to respond. Please try again."
+
+---
 
 Each recommendation card in Step 3 carries structured metadata that drives automatic patching:
 

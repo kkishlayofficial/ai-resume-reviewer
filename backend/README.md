@@ -184,12 +184,35 @@ Computed in `score_service.py`. All sub-scores are integers 0–100.
 - `parse_resume(extracted_text)` → `Resume`
 - `is_valid_resume(resume_text)` → `ResumeExtractionValidation` *(heuristic, no LLM call)*
 
+### Multi-Model Fallback
+
+For structured JSON output tasks (`generate_resume_review` and `parse_resume`), both functions use `_chat_with_fallback()` which automatically cycles through a priority list of Groq models:
+
+1. `openai/gpt-oss-120b` (primary)
+2. `meta-llama/llama-4-maverick-17b-128e-instruct`
+3. `meta-llama/llama-4-scout-17b-16e-instruct`
+4. `llama-3.3-70b-versatile`
+
+**Fallback triggers:** The next model is tried on:
+- HTTP 400 (unsupported feature, e.g. model doesn't support `json_schema`)
+- HTTP 429 (rate limit on current model)
+- HTTP 503 (model overloaded)
+- `APITimeoutError` (request timeout)
+
+**Fail-fast errors:** These are raised immediately without retry:
+- HTTP 401/403 (invalid API key)
+- `APIConnectionError` (network down)
+
+If all models fail, the last encountered exception is raised.
+
+### Schema & Response Format
+
 All LLM calls use `response_format` with `type: json_schema` and `strict: True`. Pydantic's `model_json_schema()` output is pre-processed by `make_strict_schema()` which:
 - Adds every property key to `required` on all nested objects (required by OpenAI strict mode)
 - Sets `additionalProperties: false` recursively
 - Removes `default` values (not permitted in strict mode)
 
-**Error handling:** `APITimeoutError` → HTTP 504, `APIConnectionError` → HTTP 503, `APIStatusError` → HTTP 502.
+**Error handling:** `APITimeoutError` → HTTP 504, `APIConnectionError` → HTTP 503, all other `APIStatusError` → HTTP 502.
 
 **Token budgets:** parse = 4000 tokens, review = 3000 tokens.
 

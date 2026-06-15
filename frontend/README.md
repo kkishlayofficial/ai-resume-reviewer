@@ -211,6 +211,25 @@ When `true`, all API calls return hardcoded sample data with artificial delays (
 
 ---
 
+## Error Handling
+
+HTTP errors from the backend are automatically mapped to user-friendly messages by the `friendlyError()` helper in `src/services/resumeApi.ts`. Instead of exposing raw API details to users, they see clear, actionable guidance:
+
+| HTTP Status | User Message |
+|---|---|
+| 400 | "The request was invalid. Please check your input and try again." |
+| 413 | "The file is too large. Please upload a smaller file." |
+| 422 | "The uploaded file could not be processed. Please ensure it is a valid resume." |
+| 429 | "The AI service is currently busy. Please wait a moment and try again." |
+| 500 | "Something went wrong on our end. Please try again." |
+| 502 | "The AI service returned an unexpected response. Please try again." |
+| 503 | "The AI service is temporarily unavailable. Please try again shortly." |
+| 504 | "The AI service took too long to respond. Please try again." |
+
+Error messages are displayed in a red banner alert with an icon in the ResumeReview component. If a network error occurs during any step (extraction, parsing, review, download), the error is shown and the wizard allows the user to retry without losing progress.
+
+---
+
 ## Theming
 
 Light and dark mode are supported. The active theme is persisted to `localStorage` under `theme`. The `useTheme` hook reads this on mount, applies `data-theme="dark"` or `data-theme="light"` to `<html>`, and falls back to `prefers-color-scheme`. All design tokens (colors, spacing, radii, shadows) are defined as CSS custom properties in `src/index.css`.
