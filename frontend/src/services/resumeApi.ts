@@ -207,7 +207,7 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const STATUS_MESSAGES: Record<number, string> = {
+export const STATUS_MESSAGES: Record<number, string> = {
   400: "The request was invalid. Please check your input and try again.",
   401: "Authentication failed. Please check your API configuration.",
   403: "Access denied. Please check your API configuration.",
@@ -220,7 +220,7 @@ const STATUS_MESSAGES: Record<number, string> = {
   504: "The AI service took too long to respond. Please try again.",
 };
 
-function friendlyError(status: number, fallback: string): Error {
+export function friendlyError(status: number, fallback: string): Error {
   return new Error(STATUS_MESSAGES[status] ?? fallback);
 }
 
