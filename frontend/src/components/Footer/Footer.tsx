@@ -1,49 +1,93 @@
-import styles from './Footer.module.css';
+import styles from "./Footer.module.css";
 
 export function Footer() {
   const scrollTo = (id: string) => (e: React.MouseEvent) => {
     e.preventDefault();
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
     <footer className={styles.footer}>
       <div className={styles.container}>
+        {/* Brand */}
         <div className={styles.brand}>
           <div className={styles.logo}>
-            <svg width="24" height="24" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-              <rect width="28" height="28" rx="7" fill="#2563EB" />
-              <path d="M8 9h8M8 13h12M8 17h10" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-              <circle cx="21" cy="9" r="2.5" fill="#BFDBFE" />
+            <svg
+              width='24'
+              height='24'
+              viewBox='0 0 28 28'
+              fill='none'
+              aria-hidden='true'
+            >
+              <rect width='28' height='28' rx='7' fill='#2563EB' />
+              <path
+                d='M8 9h8M8 13h12M8 17h10'
+                stroke='#fff'
+                strokeWidth='2'
+                strokeLinecap='round'
+              />
+              <circle cx='21' cy='9' r='2.5' fill='#BFDBFE' />
             </svg>
-            <span className={styles.logoText}>AI Resume Reviewer</span>
+
+            <span className={styles.logoText}>AI Resume Studio</span>
           </div>
+
           <p className={styles.brandDesc}>
-            AI-powered resume analysis to help you land your next role. Get actionable insights in seconds.
+            Transform your resume into your strongest job application with
+            AI-powered structuring, optimization, explainable scoring, and
+            one-click improvements.
           </p>
         </div>
 
-        <nav className={styles.links} aria-label="Footer navigation">
-          <a href="#features" className={styles.link} onClick={scrollTo('features')}>Features</a>
-          <a href="#how-it-works" className={styles.link} onClick={scrollTo('how-it-works')}>How It Works</a>
-          <a href="#" className={styles.link}>Privacy</a>
-          <a href="#" className={styles.link}>Contact</a>
+        {/* Navigation */}
+        <nav className={styles.links} aria-label='Footer navigation'>
           <a
-            href="https://github.com"
+            href='#features'
             className={styles.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="GitHub (opens in new tab)"
+            onClick={scrollTo("features")}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+            Features
+          </a>
+
+          <a
+            href='#how-it-works'
+            className={styles.link}
+            onClick={scrollTo("how-it-works")}
+          >
+            How It Works
+          </a>
+
+          <a href='#' className={styles.link}>
+            Privacy
+          </a>
+
+          <a href='#' className={styles.link}>
+            Contact
+          </a>
+
+          <a
+            href='https://github.com/kkishlayofficial/ai-resume-reviewer'
+            className={styles.link}
+            target='_blank'
+            rel='noopener noreferrer'
+            aria-label='GitHub (opens in new tab)'
+          >
+            <svg
+              width='16'
+              height='16'
+              viewBox='0 0 24 24'
+              fill='currentColor'
+              aria-hidden='true'
+            >
+              <path d='M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z' />
             </svg>
             GitHub
           </a>
         </nav>
 
+        {/* Copyright */}
         <div className={styles.copy}>
-          <p>© 2026 AI Resume Reviewer. All rights reserved.</p>
+          <p>© 2026 AI Resume Studio. Build. Optimize. Get Hired.</p>
         </div>
       </div>
     </footer>

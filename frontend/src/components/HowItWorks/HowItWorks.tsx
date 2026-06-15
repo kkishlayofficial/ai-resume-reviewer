@@ -3,8 +3,8 @@ import styles from './HowItWorks.module.css';
 const STEPS = [
   {
     num: '01',
-    title: 'Upload Resume',
-    desc: 'Securely upload your PDF or DOCX resume. Your file is processed in memory and never permanently stored.',
+    title: 'Upload & Parse Resume',
+    desc: 'Securely upload your PDF or DOCX resume. AI extracts the content, validates it, and converts it into a structured, editable resume.',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -17,8 +17,8 @@ const STEPS = [
   },
   {
     num: '02',
-    title: 'Verify Extracted Content',
-    desc: 'Review and edit the text extracted from your resume before analysis, ensuring formatting issues don\'t affect the evaluation.',
+    title: 'Edit & Optimize',
+    desc: 'Review your structured resume, apply AI-powered improvements with one click, edit any section, and tailor it to your target job description.',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
@@ -28,8 +28,8 @@ const STEPS = [
   },
   {
     num: '03',
-    title: 'Receive AI Insights',
-    desc: 'Get your ATS score, technical evaluation, communication assessment, and actionable recommendations — with full reasoning for every score.',
+    title: 'Review & Export',
+    desc: 'Compare scores, understand strengths and gaps, track improvements after applying suggestions, and download both your AI report and optimized resume.',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <line x1="18" y1="20" x2="18" y2="10" />
@@ -46,10 +46,10 @@ export function HowItWorks() {
       <div className={styles.container}>
         <div className={styles.header}>
           <h2 id="how-heading" className={styles.heading}>
-            How AI Reviews Your Resume
+            How AI Resume Studio Works
           </h2>
           <p className={styles.subtext}>
-            A transparent three-step process designed for explainable AI evaluation.
+            Transform your resume into an optimized, job-ready document through an AI-assisted editing workflow.
           </p>
         </div>
 

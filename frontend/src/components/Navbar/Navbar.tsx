@@ -26,7 +26,7 @@ export function Navbar({ onReviewClick, theme, onToggleTheme }: NavbarProps) {
               <circle cx="21" cy="9" r="2.5" fill="#BFDBFE" />
             </svg>
           </span>
-          <span className={styles.logoText}>AI Resume Reviewer</span>
+          <span className={styles.logoText}>AI Resume Studio</span>
         </a>
 
         {/* Center nav links */}
