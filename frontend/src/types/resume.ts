@@ -6,14 +6,67 @@ export interface ScoredAssessment {
   reasoning: string;
 }
 
-export interface Recommendation {
+// ─── Resume domain model ─────────────────────────────────────────────────────
+
+export interface ContactInfo {
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  linkedin: string;
+  github: string;
+}
+
+export interface Experience {
+  company: string;
+  role: string;
+  duration: string;
+  bullets: string[];
+}
+
+export interface Education {
+  institution: string;
+  degree: string;
+  duration: string;
+  details: string[];
+}
+
+export interface Project {
+  name: string;
+  description: string;
+  bullets: string[];
+  technologies: string[];
+}
+
+export interface Resume {
+  contact: ContactInfo;
+  summary: string;
+  experience: Experience[];
+  education: Education[];
+  skills: string[];
+  projects: Project[];
+  certifications: string[];
+}
+
+export interface ParseResumeResponse {
+  structured_resume: Resume;
+  parse_warnings: string[];
+}
+
+// ─── Patch operations ─────────────────────────────────────────────────────────
+
+export interface PatchOperation {
   priority: Priority;
   title: string;
-  section: 'summary' | 'experience' | 'skills' | 'projects' | 'education';
-  action: 'append' | 'insert' | 'replace';
-  suggested_content: string;
+  section: 'summary' | 'experience' | 'skills' | 'projects' | 'education' | 'certifications';
+  operation: 'append' | 'replace';
+  content: string;
+  target: string | null;
+  item_name: string | null;
   reasoning: string;
 }
+
+// ─── API models ───────────────────────────────────────────────────────────────
 
 export interface JobFit {
   fit: boolean;
@@ -41,6 +94,6 @@ export interface ResumeReviewResponse {
   strengths: string[];
   weaknesses: string[];
   missing_keywords: string[];
-  recommendations: Recommendation[];
+  recommendations: PatchOperation[];
   job_fit: JobFit;
 }

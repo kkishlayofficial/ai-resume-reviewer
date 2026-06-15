@@ -2,20 +2,37 @@ import { useEffect, useState } from 'react';
 import styles from './ExtractionLoading.module.css';
 import { ProgressBar } from '../../../components/ui/ProgressBar/ProgressBar';
 
-const STEPS = [
-  { label: 'Parsing PDF', duration: 700 },
+interface ExtractionLoadingProps {
+  phase?: 'extracting' | 'parsing';
+}
+
+const EXTRACTION_STEPS = [
+  { label: 'Parsing document', duration: 700 },
   { label: 'Analyzing formatting', duration: 800 },
   { label: 'Preparing editable content', duration: 700 },
 ];
 
-export function ExtractionLoading() {
-  const [progress, setProgress] = useState(5);
+const PARSING_STEPS = [
+  { label: 'Parsing resume structure', duration: 700 },
+  { label: 'Identifying sections', duration: 800 },
+  { label: 'Building resume model', duration: 700 },
+];
+
+export function ExtractionLoading({ phase = 'extracting' }: ExtractionLoadingProps) {
+  const isParsing = phase === 'parsing';
+  const STEPS = isParsing ? PARSING_STEPS : EXTRACTION_STEPS;
+
+  const [progress, setProgress] = useState(isParsing ? 50 : 5);
   const [activeStep, setActiveStep] = useState(0);
 
   useEffect(() => {
+    setProgress(isParsing ? 50 : 5);
+    setActiveStep(0);
+
+    const targetMax = isParsing ? 97 : 47;
     const interval = setInterval(() => {
       setProgress((p) => {
-        const next = Math.min(p + 4, 95);
+        const next = Math.min(p + 3, targetMax);
         return next;
       });
     }, 80);
@@ -33,16 +50,25 @@ export function ExtractionLoading() {
       clearInterval(interval);
       timers.forEach(clearTimeout);
     };
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  const title = isParsing
+    ? 'Structuring your resume...'
+    : 'Extracting text from your resume...';
 
   return (
-    <div className={styles.wrapper} role="status" aria-live="polite" aria-label="Extracting resume content">
+    <div className={styles.wrapper} role="status" aria-live="polite" aria-label={title}>
       <div className={styles.card}>
         <div className={styles.spinnerWrapper} aria-hidden="true">
           <div className={styles.spinner} />
         </div>
 
-        <h2 className={styles.title}>Extracting text from your resume...</h2>
+        <h2 className={styles.title}>{title}</h2>
+
+        {isParsing && (
+          <p className={styles.subtitle}>Converting extracted text into a structured resume model</p>
+        )}
 
         <div className={styles.progressWrapper}>
           <ProgressBar value={progress} animated />

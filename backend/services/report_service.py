@@ -299,7 +299,8 @@ def generate_pdf(data: ResumeReviewResponse, output_path="resume-analysis.pdf"):
         [
             Paragraph("<b>Priority</b>", body_style),
             Paragraph("<b>Title</b>", body_style),
-            Paragraph("<b>Recommendation</b>", body_style),
+            Paragraph("<b>Section</b>", body_style),
+            Paragraph("<b>Improvement</b>", body_style),
         ]
     ]
 
@@ -315,6 +316,11 @@ def generate_pdf(data: ResumeReviewResponse, output_path="resume-analysis.pdf"):
         else:
             color = SUCCESS
 
+        action = rec.get("action", "") or rec.get("operation", "")
+        suggested = rec.get("suggested_content", "") or rec.get("content", "")
+        reasoning = rec.get("reasoning", "")
+        improvement = sanitize(f"{suggested}\n\nReason: {reasoning}") if suggested else sanitize(reasoning)
+
         recommendation_rows.append(
             [
                 Paragraph(
@@ -322,16 +328,18 @@ def generate_pdf(data: ResumeReviewResponse, output_path="resume-analysis.pdf"):
                     body_style,
                 ),
                 Paragraph(sanitize(rec["title"]), body_style),
-                Paragraph(sanitize(rec["recommendation"]), body_style),
+                Paragraph(sanitize(f"{rec.get('section', '').capitalize()} ({action})"), body_style),
+                Paragraph(improvement, body_style),
             ]
         )
 
     rec_table = Table(
         recommendation_rows,
         colWidths=[
-            1 * inch,
-            2.2 * inch,
-            3.3 * inch,
+            0.8 * inch,
+            1.6 * inch,
+            1.2 * inch,
+            2.9 * inch,
         ],
     )
 

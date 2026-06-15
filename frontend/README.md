@@ -1,6 +1,6 @@
 # AI Resume Reviewer — Frontend
 
-A React + TypeScript single-page application that guides users through a 3-step wizard to upload a resume, verify the extracted content, and view a detailed AI evaluation report.
+A React + TypeScript single-page application that guides users through a 3-step wizard: upload a resume, verify and edit the structured content, then view and act on a detailed AI evaluation.
 
 ---
 
@@ -23,45 +23,46 @@ A React + TypeScript single-page application that guides users through a 3-step 
 frontend/
 ├── index.html
 ├── vite.config.ts
-├── vercel.json              # SPA rewrites for Vercel
-├── .env.example             # Environment variable template
+├── vercel.json              # SPA rewrites (/* → /index.html)
+├── .env.example
 ├── src/
-│   ├── App.tsx                    # Root component — renders Navbar, Hero, Features,
-│   │                              #   HowItWorks, ResumeReview, Footer
-│   ├── index.css                  # Global CSS variables (design tokens, dark mode)
+│   ├── App.tsx              # Root — renders Navbar, Hero, Features, HowItWorks,
+│   │                        #   ResumeReview, Footer
+│   ├── index.css            # Global CSS variables (design tokens, dark/light mode)
 │   ├── hooks/
-│   │   └── useTheme.ts            # Dark/light theme toggle with localStorage persistence
+│   │   └── useTheme.ts      # Dark/light theme toggle with localStorage persistence
 │   ├── types/
-│   │   └── resume.ts              # TypeScript interfaces mirroring backend Pydantic schemas
+│   │   └── resume.ts        # TypeScript interfaces mirroring backend Pydantic schemas
 │   ├── services/
-│   │   └── resumeApi.ts           # API layer — extractResume(), reviewResume(), getReport()
-│   │                              #   with a MOCK_MODE flag for development without a backend
+│   │   └── resumeApi.ts     # API layer — extractResume(), parseResume(),
+│   │                        #   reviewResume(), getReport(), downloadResume()
+│   │                        #   Includes MOCK_MODE flag for development
 │   ├── components/
-│   │   ├── Navbar/                # Site header with theme toggle
-│   │   ├── Hero/                  # Landing hero section
-│   │   ├── Features/              # Feature highlights section
-│   │   ├── HowItWorks/            # Step explanation section
+│   │   ├── Navbar/          # Site header with theme toggle
+│   │   ├── Hero/            # Landing hero section
+│   │   ├── Features/        # Feature highlights
+│   │   ├── HowItWorks/      # Step explanation section
 │   │   ├── Footer/
-│   │   └── ui/                    # Reusable primitives
-│   │       ├── Badge/             # Status badge (fit / not fit, priority levels)
-│   │       ├── Button/            # Primary / secondary / ghost variants
-│   │       ├── Card/              # Container with optional shadow
-│   │       ├── Chip/              # Inline tag for skills / keywords
-│   │       ├── CircularScore/     # SVG ring chart for the overall score
-│   │       └── ProgressBar/       # Linear progress bar
+│   │   └── ui/              # Reusable primitives
+│   │       ├── Badge/       # Priority / fit status badge
+│   │       ├── Button/      # Primary / secondary / ghost variants
+│   │       ├── Card/        # Container with optional shadow
+│   │       ├── Chip/        # Inline tag for skills / keywords
+│   │       ├── CircularScore/  # SVG ring chart for the overall score
+│   │       └── ProgressBar/    # Linear progress bar
 │   └── modules/
 │       └── resume-review/
-│           ├── ResumeReview.tsx           # Top-level state machine (phase + dirty flags,
-│           │                              #   localStorage persistence, PDF download handler,
-│           │                              #   apply-recommendation + re-evaluate handlers)
+│           ├── ResumeReview.tsx        # Top-level state machine
 │           ├── utils/
-│           │   └── applyRecommendation.ts # Section-aware text patching utility
-│           ├── StepWizard/                # Step indicator nav bar
-│           ├── Step1Upload/               # File picker with drag-and-drop
-│           ├── ExtractionLoading/         # Animated loading screen (upload → verify)
-│           ├── Step2Verify/               # Resume text editor + highlight overlay + JD input
-│           ├── AnalysisLoading/           # Animated loading screen (verify → dashboard)
-│           └── Step3Dashboard/            # Full evaluation report + actionable improvements
+│           │   ├── applyPatch.ts       # Structured Resume model patcher
+│           │   └── resumeToText.ts     # Resume model → plain text for LLM review
+│           ├── StepWizard/             # Step indicator nav bar
+│           ├── Step1Upload/            # File picker with drag-and-drop
+│           ├── ExtractionLoading/      # Animated loading (upload → verify)
+│           ├── Step2Verify/            # Structured editor (drag-and-drop bullets,
+│           │                           #   AI badges, JD input, experience level)
+│           ├── AnalysisLoading/        # Animated loading (verify → dashboard)
+│           └── Step3Dashboard/         # Scores, recommendations, download buttons
 ```
 
 ---
@@ -69,22 +70,97 @@ frontend/
 ## Application Flow
 
 ```
-upload  ──[extract file]──▶  extracting  ──[API success]──▶  verify
-                                │
-                           [API error]
-                                │
-                                ▼
-                             upload (error shown)
+upload ──[upload file]──▶ extracting ──[extract OK]──▶ parsing ──[parse OK]──▶ verify
+           │                  │                           │
+           │             [error]                     [error]
+           │                  └──────────────────────────┘
+           │                              │
+           ▼                              ▼
+        upload                        upload (error shown)
 
-verify  ──[review]──▶  reviewing  ──[API success]──▶  dashboard
-                           │
-                      [API error]
-                           │
-                           ▼
-                        verify (error shown)
+verify ──[review]──▶ reviewing ──[review OK]──▶ dashboard
+                         │
+                    [error]
+                         │
+                         ▼
+                      verify (error shown)
 ```
 
-The `phase` field in `ResumeReview`'s state drives which component is mounted. The `StepWizard` nav bar derives its state from `maxReachedStep`, `step1Dirty`, and `step2Dirty` flags — preventing users from jumping to a step whose inputs have changed since it was last completed.
+The `phase` field in `ResumeReview` state drives which component is rendered. `StepWizard` derives its state from `maxReachedStep`, `step1Dirty`, and `step2Dirty` — preventing navigation to a step whose inputs have changed since it was last completed.
+
+---
+
+## State Management
+
+All state lives in a single `State` object in `ResumeReview.tsx`:
+
+| Field | Description |
+|---|---|
+| `phase` | Current wizard phase |
+| `file` | Uploaded `File` object |
+| `extractedText` | Raw text from extraction |
+| `parsedResume` | Original parsed `Resume` model — never mutated |
+| `editedResume` | User-edited version — sent to LLM review and used for download |
+| `jobDescription` | Pasted job description text |
+| `experienceLevel` | `"junior"` \| `"mid"` \| `"senior"` |
+| `reviewResult` | Latest `ResumeReviewResponse` |
+| `baselineResult` | First review result — preserved for score delta |
+| `appliedRecommendations` | Indices of applied `recommendations[]` entries |
+| `rejectedRecommendations` | Indices of dismissed cards |
+| `recommendationAddedContents` | `patch.content` strings of applied patches — used to identify AI-added items in Step 2 |
+| `maxReachedStep` | Furthest step reached — controls step nav |
+| `step1Dirty` / `step2Dirty` | Whether inputs changed since the step was completed |
+| `error` | Current error message (transient, not persisted) |
+
+---
+
+## Session Persistence
+
+All state is persisted to `localStorage` so a page refresh never loses progress.
+
+| Key | Contents |
+|---|---|
+| `resume-review-state-v2` | All state fields except `file` and `error` |
+| `resume-review-file` | Uploaded file serialised as `{ dataUrl, name }` |
+
+**On load:**
+- `extracting` / `parsing` phases → normalized back to `upload`
+- `reviewing` phase → normalized back to `verify`
+- Stale schemas (missing `operation` field on recommendations) → wiped and reset
+- Missing `recommendationAddedContents` → defaults to `[]`
+
+**Calling Start Over** removes both keys and resets to initial state.
+
+If the file exceeds localStorage quota, file persistence fails silently. All other state is still saved.
+
+---
+
+## Step 2 — Structured Editor
+
+Step 2 renders a full structured editor for the parsed resume, replacing the old plain-text textarea.
+
+**Features:**
+- Edit every field: contact info, summary, experience (role / company / duration / bullets), education (institution / degree / duration / details), skills, projects (name / description / bullets / technologies), certifications
+- **Drag-and-drop bullet reordering** — grip handle appears on hover; drag any bullet to reorder within its list
+- **AI indicator badges** — items added via recommendations are highlighted:
+  - Bullets: `✦ AI` pill badge + purple left-border accent on the textarea
+  - Chips (skills, certifications, technologies): green chip colour + `✦` prefix
+  - Summary: `✦ AI recommendation applied` banner above the textarea
+- **Reset to Original** — reverts `editedResume` to `parsedResume` and clears all AI badges
+- Minimum JD length enforced (50 characters) before the Review button is enabled
+
+---
+
+## Step 3 — Dashboard
+
+- Overall score ring chart + ATS / Technical / Communication score cards with reasoning
+- Score delta badges (e.g. `+13`) appear after re-evaluation
+- Skills chips, strengths, weaknesses, missing keywords
+- Recommendation cards with `+ Add to Resume` / Reject buttons and priority badges
+- Applied counter (`Applied: N / M`) and Re-evaluate button (enabled when ≥ 1 improvement applied)
+- Job fit verdict card
+- **Download Report** — `POST /resume/report` → PDF analysis report
+- **Download Resume** — `POST /resume/download?format=pdf|docx` → formatted resume document
 
 ---
 
@@ -92,30 +168,23 @@ The `phase` field in `ResumeReview`'s state drives which component is mounted. T
 
 ### Prerequisites
 - Node.js 20+
-- npm or yarn
 
 ### Install and run
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Copy the example env file (default points to localhost:8000)
 cp .env.example .env
-
-# Start the dev server
 npm run dev
+# Dev server at http://localhost:5173
 ```
-The dev server starts at `http://localhost:5173`.
 
-### Build for production
+### Build
 ```bash
-npm run build       # Type-checks then bundles
-npm run preview     # Preview the production build locally
+npm run build    # Type-check + bundle
+npm run preview  # Preview production build locally
 ```
 
-### Linting
+### Lint
 ```bash
 npm run lint
 ```
@@ -124,11 +193,9 @@ npm run lint
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|---|---|---|
-| `VITE_API_BASE_URL` | No | Backend API base URL. Defaults to `http://localhost:8000`. Set to your deployed backend URL in production. |
-
-Copy `.env.example` to `.env` for local development. For Vercel, set variables in the project settings — they are injected at build time.
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `VITE_API_BASE_URL` | No | `http://localhost:8000` | Backend API base URL. Set to your deployed backend URL in production. |
 
 ---
 
@@ -137,90 +204,38 @@ Copy `.env.example` to `.env` for local development. For Vercel, set variables i
 `src/services/resumeApi.ts` exports a `MOCK_MODE` flag:
 
 ```ts
-export const MOCK_MODE = true;
+export const MOCK_MODE = false;
 ```
 
-When `true`, both `extractResume()` and `reviewResume()` return hardcoded mock data with artificial delays (`2.2s` extraction, `3.5s` review) instead of calling the backend. This lets you develop and test the full UI without a running backend.
-
-Set `MOCK_MODE = false` and ensure the backend is running on `http://localhost:8000` to use real data.
-
----
-
-## State Persistence
-
-All session state is persisted to `localStorage` so a page refresh does not lose progress.
-
-| Storage key | Contents |
-|---|---|
-| `resume-review-state` | Phase, extracted text, edited resume text, job description, experience level, review result, baseline result, applied recommendation indices, step progress, dirty flags |
-| `resume-review-file` | The uploaded `File` serialized as a Base64 data URL (`{ dataUrl, name }`) |
-
-**What survives a refresh:**
-- Extracted and edited resume text (including all applied improvements)
-- Job description and experience level
-- Full review result and baseline result (for score delta)
-- Applied recommendation indices (`appliedRecommendations`)
-- Step progress (`maxReachedStep`, dirty flags)
-- The uploaded file (reconstructed via `atob` + `new File(...)`)
-
-**What doesn’t survive:**
-- In-flight phases (`extracting`, `reviewing`) — normalized back to the preceding stable phase on load
-- Transient error messages
-- Applied highlight ranges (`appliedRanges`) — these are positional and would be stale after a refresh; cards still show ✓ Applied state via the persisted `appliedRecommendations` index array
-- Persisted review results from before the new schema (missing `section`/`action` fields) — automatically wiped on load to prevent crashes
-
-Calling **Start Over** (reset) removes both storage keys.
-
-If the file is too large and writing to localStorage would exceed the quota, the file persistence step fails silently — all other state is still saved.
+When `true`, all API calls return hardcoded sample data with artificial delays (no backend required). Set to `false` to use the real API.
 
 ---
 
 ## Theming
 
-The app supports light and dark mode. The active theme is stored in `localStorage` under `theme`. The `useTheme` hook reads this on mount, applies `data-theme="dark"` or `data-theme="light"` to `<html>`, and falls back to the OS `prefers-color-scheme` media query. All colors, spacing, and radius values are defined as CSS custom properties in `src/index.css`.
+Light and dark mode are supported. The active theme is persisted to `localStorage` under `theme`. The `useTheme` hook reads this on mount, applies `data-theme="dark"` or `data-theme="light"` to `<html>`, and falls back to `prefers-color-scheme`. All design tokens (colors, spacing, radii, shadows) are defined as CSS custom properties in `src/index.css`.
 
 ---
 
-## Known Limitations & Shortcomings
+## Deployment (Vercel)
 
-### File Handling
-- **No image support.** Resume images (`.jpg`, `.png`, `.webp`, etc.) cannot be uploaded. The file input and drop zone only accept `.pdf` and `.docx`. There is no client-side OCR or image-to-text conversion. Users with image-format resumes must convert them first.
-- **No scanned PDF detection.** A PDF that is a scanned image will be accepted by the file picker but will return blank or near-blank extracted text from the backend. There is no client-side warning for this case.
-- **10 MB client-side size hint only.** The "Max 10MB" label in the drop zone is UI text only — there is no JavaScript enforcement of a file size limit before upload. Oversized files are sent to the backend and may cause slow or failed requests.
-- **Single file only.** There is no support for uploading multiple resume versions or comparing two resumes side by side.
+Live URL: **https://ai-resume-reviewer-rho-rust.vercel.app**
 
-### Resume Text Editing (Step 2)
-- **No rich-text editor.** The extracted resume is displayed in a plain `<textarea>`. Formatting, bullet points, and layout information from the original document are lost. The user sees flat plain text.
-- **Highlight overlay.** When improvements are applied via Step 3, newly inserted content is highlighted green using a transparent-textarea + absolutely-positioned overlay technique. Highlights clear automatically on manual edits (since character positions become stale).
-- **No diff view.** There is no way to visually compare the original extracted text against the user’s edits. The “Reset to Original” button reverts all edits at once with no confirmation.
-- **Extraction warnings are shown but not actionable.** If the backend returns `extraction_warnings`, they are displayed as a warning banner in Step 2. However, there is no automated correction — the user must fix any issues manually in the text editor.
-- **Section-header matching is heuristic.** The `applyRecommendation` utility detects section boundaries by matching common header strings (e.g. “SKILLS”, “Technical Skills”, “Work Experience”). Non-standard or unusual section headings may not be matched, in which case the content is appended at the end of the document.
-
-### Dashboard (Step 3)- **Actionable improvement cards** — each recommendation includes the target `section`, `action` type, `suggested_content`, and `reasoning`. Clicking **+ Add to Resume** on `append`/`insert` cards patches the resume text and highlights the insertion in green in Step 2. `replace`-type cards show a suggested rewrite and prompt manual editing.
-- **Score deltas** — after re-evaluating, the original baseline score is preserved so the before → after comparison (e.g. `78 → 91  +13`) is always visible.
-- **Applied counter** — `Applied: N/M` badge tracks how many improvements have been applied.
-- **Re-evaluate Resume button** — appears after at least one improvement is applied; triggers a full re-score of the updated resume text.- **PDF export available.** The "Download Report" button calls `POST /resume/report` with the review result, receives a binary PDF from the backend, and triggers a browser file download via a temporary blob URL. The object URL is revoked after a short delay to ensure the download initiates before cleanup.
-- **No share link.** There is no way to generate a shareable URL or copy results to the clipboard.
-- **No history.** Each session is stateless. Previous analyses are not stored and cannot be retrieved.
-
-### API & Error Handling
-- **Generic error messages.** API errors display the backend's `detail` string directly (or a fallback message). There is no differentiation between network errors, rate limit errors (HTTP 429), and validation errors (HTTP 400) — the user sees a single error banner without guidance on what to do.
-- **No retry mechanism.** If the API call fails due to a transient error (timeout, rate limit), the user must manually click the button again.
-- **No request cancellation.** If the user navigates back during extraction or review, the in-flight `fetch` request is not cancelled.
-
-### Accessibility
-- The drag-and-drop zone has basic keyboard support (`Enter` to open the file picker) but no `role="application"` or live region announcements for drag state changes.
-- Score colors in Step 3 rely on color alone to convey severity (green/blue/amber/red). There are no patterns or icons as a secondary indicator for users with color vision deficiency.
-
-### Responsiveness
-- The two-column layout in Step 2 collapses to a single column below 900px. Steps 1 and 3 are generally mobile-friendly, but Step 3's multi-card dashboard has not been optimized for very small screens.
-
-### Testing
-- There are no unit tests, integration tests, or end-to-end tests. The `MOCK_MODE` flag serves as a manual testing convenience but is not tied to any automated test suite.
-
-### Deployment
-- Deployed on Vercel. Live URL: **https://ai-resume-reviewer-rho-rust.vercel.app**
-- `vercel.json` rewrites all routes to `/index.html` to support client-side routing (SPA behaviour).
-- The backend URL is configured via `VITE_API_BASE_URL` — set this in Vercel project environment variables; no code changes needed.
+1. Import the repo into Vercel → set **Root Directory** to `frontend`
+2. Framework preset: **Vite**
+3. Add environment variable:
+   ```
+   VITE_API_BASE_URL = https://your-backend.vercel.app
+   ```
+4. Deploy — `vercel.json` handles SPA routing automatically
 
 ---
+
+## Known Limitations
+
+- **PDF/DOCX only** — no image resume support
+- **No request cancellation** — navigating back during extraction or review does not cancel the in-flight `fetch`
+- **No retry mechanism** — transient errors require a manual retry
+- **No diff view** — Reset to Original reverts all edits without a before/after comparison
+- **Step 3 not fully optimised for small screens** — the multi-card dashboard is readable but not polished on mobile
+- **No unit or integration tests** — `MOCK_MODE` is the primary development convenience, not an automated test suite

@@ -33,12 +33,16 @@ SYSTEM_PROMPT = """
     - You have to provide a list of strengths. Strengths should highlight areas where the resume aligns well with the job description and expected experience level.
     - You have to provide a list of weaknesses. Weaknesses should highlight gaps, missing evidence, or shortcomings relative to the job description and expected experience level.
     - You have to provide a list of missing keywords that are not available in the resume but the job description requires. Only include keywords that are important for the target role and are absent or insufficiently represented in the resume.
-    - You have to provide a list of recommendations that is applicable for the resume based on the job description. Provide detailed recommendations. Recommendations should be actionable, specific, and prioritized. Avoid generic advice such as "improve your resume.". A recommendation will be an object with six keys:
+    - You have to provide a list of recommendations that is applicable for the resume based on the job description. Provide detailed recommendations. Recommendations should be actionable, specific, and prioritized. Avoid generic advice such as "improve your resume.". A recommendation will be an object with these keys:
         - priority: Must be one of: "high", "medium", "low"
         - title: A short heading describing the improvement (e.g., "Add CI/CD Experience")
-        - section: The resume section this recommendation applies to. Must be exactly one of: "summary", "experience", "skills", "projects", "education"
-        - action: How to apply this recommendation. Must be exactly one of: "append" (add content to the end of the section), "insert" (add content to the beginning of the section, right after the section header), "replace" (suggest replacing existing content — use ONLY when rewriting a specific existing bullet or line; do NOT use for adding new content). Prefer "append" or "insert" over "replace" whenever possible.
-        - suggested_content: The exact text to add or replace. For "append" and "insert", provide only the new content to add (e.g., a skill name, a bullet point, or a sentence). For "replace", write it in this format: "Current: [the exact existing text]\nSuggested: [the improved replacement text]"
+        - section: The resume section this patch applies to. Must be exactly one of: "summary", "experience", "skills", "projects", "education", "certifications"
+        - operation: How to apply this patch. Must be exactly one of:
+            "append" — add new content (a skill, a bullet, a sentence). Use this for all additions.
+            "replace" — replace a specific existing piece of text. Use ONLY when rewriting a specific existing bullet or the summary. Prefer "append" whenever possible.
+        - content: The exact text to add or replace WITH. For "append", provide only the new content (e.g., a skill name, a single bullet point). For "replace", provide only the new replacement text (not the old text).
+        - target: Required when operation is "replace". Provide the exact existing text to be replaced (copy it verbatim from the resume). Set to null for "append".
+        - item_name: Required when section is "experience" or "projects" — provide the company name or project name exactly as it appears in the resume so the patch can be applied to the correct item. Set to null for all other sections.
         - reasoning: 1–2 sentences explaining why this specific change matters for the target job description.
     - You also have to provide whether the resume of the candidate is fit for the job or not. Job Fit is an object with two keys: fit: return true or false and explanation: Provide the details why candidate is fit or unfit. Provide a concise summary in approximately 80-120 words.
 
@@ -49,6 +53,32 @@ SYSTEM_PROMPT = """
     - Return markdown or explanatory text outside the schema.
     - Return fields not defined in the schema.
     """
+
+
+SYSTEM_PROMPT_FOR_RESUME_PARSING = """
+Role:
+You are an expert resume parser. Your job is to convert raw resume text into a structured JSON object.
+
+Objective:
+Parse the provided resume text and extract all information into the structured Resume schema.
+
+Parsing Rules:
+- Extract all information you can find. Do not invent or guess details not present in the text.
+- For missing scalar fields (name, email, summary, etc.), use an empty string "".
+- For missing list fields (skills, bullets, etc.), use an empty array [].
+- For experience bullets: extract each bullet point or sentence as a separate string in the bullets array.
+- For education details: extract any additional details (GPA, honors, relevant courses) as separate strings in the details array.
+- For projects: extract technologies mentioned as a separate technologies array if possible.
+- Preserve exact wording from the resume — do not paraphrase or improve the content.
+- If the resume has multiple jobs, create a separate Experience object for each.
+- If the resume has multiple education entries, create a separate Education object for each.
+- item_name in future patches will use company name and project name, so preserve them exactly.
+
+Do not:
+- Invent contact details or experiences not in the text.
+- Return markdown or explanatory text outside the schema.
+- Return fields not defined in the schema.
+"""
 
 
 SYSTEM_PROMPT_FOR_RESUME_VALIDATION = """

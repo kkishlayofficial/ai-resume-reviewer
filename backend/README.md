@@ -1,6 +1,6 @@
 # AI Resume Reviewer — Backend
 
-A FastAPI backend that accepts resume files, extracts their text content, and sends the result to a Groq-hosted LLM for structured AI evaluation against a job description.
+A FastAPI backend that extracts text from resume files, parses it into a structured model, and evaluates it against a job description using a Groq-hosted LLM with strict JSON schema output.
 
 ---
 
@@ -15,8 +15,8 @@ A FastAPI backend that accepts resume files, extracts their text content, and se
 | PDF extraction | pdfplumber |
 | DOCX extraction | python-docx |
 | LLM provider | Groq API (`openai/gpt-oss-120b`) |
-| PDF report generation | ReportLab |
-| HTTP client | httpx |
+| Resume generation | ReportLab (PDF), python-docx (DOCX) |
+| HTTP client | httpx (via Groq SDK) |
 | Config | python-dotenv |
 
 ---
@@ -25,25 +25,25 @@ A FastAPI backend that accepts resume files, extracts their text content, and se
 
 ```
 backend/
-├── main.py                  # FastAPI app setup, CORS middleware
+├── main.py                    # FastAPI app, CORS middleware
 ├── requirements.txt
-├── vercel.json              # Vercel deployment config (rewrites → api/index)
-├── .python-version          # Pins Python 3.12 for Vercel
-├── .env.example             # Environment variable template
+├── vercel.json                # Rewrites all requests to /api/index
+├── .env.example
 ├── api/
-│   └── index.py             # Vercel serverless entrypoint (re-exports app from main.py)
+│   └── index.py               # Vercel serverless entrypoint (re-exports app)
 ├── routes/
-│   └── resume.py            # /resume/extract, /resume/review, /resume/report endpoints
+│   └── resume.py              # All API route handlers
 ├── schemas/
-│   └── resume.py            # Pydantic models for request/response contracts
+│   └── resume.py              # Pydantic models for all request/response contracts
 ├── services/
-│   ├── extraction_service.py  # pdfplumber / python-docx parsing
-│   ├── resume_service.py      # Orchestrates extraction → validation → LLM → scoring
-│   ├── llm_service.py         # Groq API calls (review + resume validation)
+│   ├── extraction_service.py  # pdfplumber / python-docx text extraction
+│   ├── resume_service.py      # Orchestration: validation, preprocessing, parse, review
+│   ├── llm_service.py         # Groq API calls + make_strict_schema + heuristic validation
 │   ├── score_service.py       # Weighted overall score calculation
-│   └── report_service.py      # ReportLab PDF report generation
+│   ├── report_service.py      # ReportLab PDF analysis report generation
+│   └── docx_service.py        # Resume PDF + DOCX file generation
 └── prompts/
-    └── resume.py              # System prompts for review and resume validation
+    └── resume.py              # System prompts for LLM review and parsing
 ```
 
 ---
@@ -51,9 +51,11 @@ backend/
 ## API Endpoints
 
 ### `POST /resume/extract`
-Accepts a multipart file upload (`application/pdf` or `.docx`), extracts plain text, runs an LLM-based validation step to confirm the file is actually a resume, and returns the text for user review before analysis.
 
-**Request:** `multipart/form-data` with a `file` field  
+Accepts a multipart file upload (`.pdf` or `.docx`), extracts plain text, and runs a heuristic validation to confirm the file is a resume.
+
+**Request:** `multipart/form-data` — field `file`
+
 **Response:**
 ```json
 {
@@ -63,67 +65,106 @@ Accepts a multipart file upload (`application/pdf` or `.docx`), extracts plain t
 ```
 
 **Validation pipeline:**
-1. Character-length check — text must be between 200 and 5000 characters (HTTP 400 otherwise)
-2. LLM validation — `is_valid_resume()` calls the Groq API with the extracted text and returns a `ResumeExtractionValidation` object (`is_resume`, `confidence`, `validation_message`). If `is_resume` is `false`, the endpoint returns HTTP 400 with the `validation_message` as the error detail.
+1. Length check — text must be 200–5000 characters (HTTP 400 otherwise)
+2. Keyword heuristic — checks for resume indicator terms (`experience`, `education`, `skills`, `projects`, `summary`, `employment`, `internship`, `certifications`, etc.). No LLM call required.
+
+---
+
+### `POST /resume/parse`
+
+Parses extracted resume text into a structured `Resume` model using the LLM.
+
+**Request body:**
+```json
+{ "extracted_text": "..." }
+```
+
+**Response:**
+```json
+{
+  "structured_resume": {
+    "contact": { "name": "", "email": "", "phone": "", "location": "", "linkedin": "", "github": "" },
+    "summary": "",
+    "experience": [{ "company": "", "role": "", "duration": "", "bullets": [] }],
+    "education": [{ "institution": "", "degree": "", "duration": "", "details": [] }],
+    "skills": [],
+    "projects": [{ "name": "", "description": "", "bullets": [], "technologies": [] }],
+    "certifications": []
+  },
+  "parse_warnings": []
+}
+```
+
+Fields absent from the resume are returned as empty strings or empty arrays — never `null`.
 
 ---
 
 ### `POST /resume/review`
-Sends the (potentially user-edited) resume text, a job description, and an experience level to the LLM and returns a structured evaluation.
+
+Evaluates the structured resume (serialised to text) against a job description using the LLM and returns a full analysis.
 
 **Request body:**
 ```json
 {
-  "resume_text": "...",        // min 200 characters
-  "job_description": "...",   // min 50 characters
+  "resume_text": "...",
+  "job_description": "...",
   "experience_level": "junior | mid | senior"
 }
 ```
 
-**Response:** See `ResumeReviewResponse` in `schemas/resume.py` — includes overall score, ATS/technical/communication sub-scores with reasoning, skills list, strengths, weaknesses, missing keywords, patch-based actionable improvements, and a job fit verdict.
+**Response:** `ResumeReviewResponse` — see `schemas/resume.py`. Includes:
 
-Each item in `recommendations` includes:
+- `overall_score` — weighted average (integer 0–100)
+- `ats_score`, `technical_score`, `communication_score` — `{ score, reasoning }`
+- `summary` — ~100-word executive summary
+- `skills`, `strengths`, `weaknesses`, `missing_keywords` — string arrays
+- `recommendations` — array of `PatchOperation` objects (see below)
+- `job_fit` — `{ fit: bool, explanation: string }`
+
+Each `PatchOperation`:
 
 | Field | Type | Description |
 |---|---|---|
 | `priority` | `"high" \| "medium" \| "low"` | Importance ranking |
-| `title` | `string` | Short heading for the improvement |
-| `section` | `"summary" \| "experience" \| "skills" \| "projects" \| "education"` | Target resume section |
-| `action` | `"append" \| "insert" \| "replace"` | How to apply — `append`/`insert` are auto-applied by the frontend; `replace` is a manual suggestion |
-| `suggested_content` | `string` | Exact text to add (or `Current: …\nSuggested: …` format for `replace`) |
-| `reasoning` | `string` | 1–2 sentences explaining why this change matters for the target role |
-
----
-
-### `GET /resume/experience-level`
-Returns the list of valid experience level values: `["junior", "mid", "senior"]`.
+| `title` | `string` | Short heading |
+| `section` | `"summary" \| "experience" \| "skills" \| "projects" \| "education" \| "certifications"` | Target section |
+| `operation` | `"append" \| "replace"` | How to apply |
+| `content` | `string` | Text to add (append) or replace with (replace) |
+| `target` | `string \| null` | (`replace` only) Exact existing text to overwrite |
+| `item_name` | `string \| null` | (`experience`/`projects`) Company or project name to locate the right entry |
+| `reasoning` | `string` | Why this change matters |
 
 ---
 
 ### `POST /resume/report`
-Generates a formatted PDF report from a completed review result and returns it as a file download.
 
-**Request body:** A `ResumeReviewResponse` JSON object (the full output of `/resume/review`)
+Generates a formatted PDF analysis report and returns it as a file download.
 
-**Response:** `application/pdf` binary — `Content-Disposition: attachment; filename="resume-analysis-report.pdf"`
+**Request body:** A complete `ResumeReviewResponse` JSON object
 
-The report includes:
-- Overall score with a visual progress bar
-- ATS, Technical, and Communication score cards
-- Executive summary
-- Detailed score breakdowns with reasoning
-- Skills listed as a comma-separated string
-- Strengths, weaknesses, and missing keywords as bulleted lists
-- Prioritised recommendations table (HIGH / MEDIUM / LOW)
-- Job fit verdict with explanation
+**Response:** `application/pdf` — `Resume-Analysis-Report.pdf`
 
-The PDF is generated in-memory via a temporary file and deleted after the response is sent. ReportLab is used for all layout and rendering. All LLM-generated text is sanitized before rendering to replace Unicode characters outside Helvetica's Latin-1 range (em dashes, curly quotes, ellipsis, etc.) with ASCII equivalents.
+The report includes: overall score, sub-score cards with reasoning, executive summary, skills, strengths, weaknesses, missing keywords, prioritised recommendations, and job fit verdict.
+
+---
+
+### `POST /resume/download`
+
+Generates a clean resume document from the structured `Resume` model.
+
+**Request body:** `{ "resume": <Resume object> }`
+
+**Query param:** `?format=docx` (default) or `?format=pdf`
+
+**Response:** `application/vnd.openxmlformats-officedocument.wordprocessingml.document` or `application/pdf`
+
+Education entries are formatted as:
+- Line 1: **Institution name** | Duration (bold)
+- Line 2: Degree (muted)
 
 ---
 
 ## Scoring
-
-The overall score is a weighted average computed in `score_service.py`:
 
 | Dimension | Weight |
 |---|---|
@@ -131,99 +172,90 @@ The overall score is a weighted average computed in `score_service.py`:
 | ATS | 30% |
 | Communication | 20% |
 
-All individual scores are integers from 0–100 produced by the LLM. The overall score is rounded to the nearest integer.
+Computed in `score_service.py`. All sub-scores are integers 0–100.
+
+---
+
+## LLM Integration
+
+`llm_service.py` exposes three functions:
+
+- `generate_resume_review(system_prompt, user_prompt)` → `ResumeReviewAIOutput`
+- `parse_resume(extracted_text)` → `Resume`
+- `is_valid_resume(resume_text)` → `ResumeExtractionValidation` *(heuristic, no LLM call)*
+
+All LLM calls use `response_format` with `type: json_schema` and `strict: True`. Pydantic's `model_json_schema()` output is pre-processed by `make_strict_schema()` which:
+- Adds every property key to `required` on all nested objects (required by OpenAI strict mode)
+- Sets `additionalProperties: false` recursively
+- Removes `default` values (not permitted in strict mode)
+
+**Error handling:** `APITimeoutError` → HTTP 504, `APIConnectionError` → HTTP 503, `APIStatusError` → HTTP 502.
+
+**Token budgets:** parse = 4000 tokens, review = 3000 tokens.
 
 ---
 
 ## Setup
 
-### 1. Create and activate a virtual environment
 ```bash
+# 1. Create and activate a virtual environment
 python -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
-```
 
-### 2. Install dependencies
-```bash
+# 2. Install dependencies
 pip install -r requirements.txt
-```
 
-### 3. Configure environment variables
-Copy the example file and fill in your values:
-```bash
+# 3. Configure environment variables
 cp .env.example .env
 ```
 
 | Variable | Required | Description |
 |---|---|---|
 | `GROQ_API_KEY` | Yes | Obtain at [console.groq.com](https://console.groq.com) |
-| `ALLOWED_ORIGINS` | No | Comma-separated frontend origins. Defaults to `http://localhost:5173,http://127.0.0.1:5173`. Set to your Vercel frontend URL in production. |
+| `ALLOWED_ORIGINS` | No | Comma-separated frontend origins. Defaults to `http://localhost:5173,http://127.0.0.1:5173` |
 
-### 4. Run the development server
 ```bash
+# 4. Start the dev server
 uvicorn main:app --reload
+# API available at http://localhost:8000
 ```
-The server starts at `http://localhost:8000`.
 
 ---
 
 ## Deployment (Vercel)
 
-The backend is deployed as a Python serverless function on Vercel.
-
 Live URL: **https://ai-resume-reviewer-be.vercel.app**
 
-### How it works
-- `api/index.py` re-exports the FastAPI `app` from `main.py` — Vercel treats any file inside `api/` as a serverless function entrypoint
+- `api/index.py` re-exports the FastAPI `app` — Vercel treats it as a serverless function entrypoint
 - `vercel.json` rewrites all requests (`/.*`) to `/api/index`
-- `.python-version` pins Python 3.12
+- `.python-version` pins Python 3.12 for Vercel
 
-### Deploy steps
+**Deploy steps:**
 1. Import the repo into Vercel → set **Root Directory** to `backend`
-2. Add environment variables in Vercel project settings:
+2. Add environment variables in project settings:
    ```
    GROQ_API_KEY     = your_groq_api_key
    ALLOWED_ORIGINS  = https://your-frontend.vercel.app
    ```
-3. Deploy — Vercel auto-detects `vercel.json`
+3. Deploy
 
 ---
 
 ## CORS
 
-Allowed origins are configured via the `ALLOWED_ORIGINS` environment variable (comma-separated list). The default value is `http://localhost:5173,http://127.0.0.1:5173` for local development.
-
-In production, set `ALLOWED_ORIGINS` to your deployed frontend URL (e.g. `https://your-frontend.vercel.app`) in the Vercel project environment variables.
+Controlled via the `ALLOWED_ORIGINS` environment variable (comma-separated). Defaults to localhost for development. Set to your deployed frontend URL in production.
 
 ---
 
-## Known Limitations & Shortcomings
+## Known Limitations
 
-### File Format Support
-- **No image support.** Resumes submitted as `.jpg`, `.png`, `.webp`, or any other image format are rejected. There is no OCR pipeline.
-- **No scanned PDF support.** `pdfplumber` extracts text from the PDF's text layer. A resume scanned as an image embedded in a PDF will return an empty or near-empty string and fail validation. Tools like Tesseract or a vision-capable model would be needed to handle these.
-- **No `.odt`, `.rtf`, or `.txt` support.** Only `.pdf` and `.docx` are accepted.
-- **Multi-column PDF layouts** can confuse pdfplumber's reading order. Text from side-by-side columns may be interleaved, potentially degrading LLM evaluation quality.
-
-### Resume Validation
-- The 5000-character upper limit on extracted text will silently truncate long resumes since `validate_resume` raises an HTTP 400 for anything over this length. Long resumes are rejected rather than truncated gracefully.
-- Validation runs only on the extracted text, not the user-edited text sent for review. A user could edit the text down below 200 characters after extraction and bypass the extraction-side check (the `ResumeRequest` schema enforces `min_length=200`, so this is caught at the review stage).
-
-### LLM & Groq API
-- **Rate limit sensitivity.** The Groq free tier has strict Tokens Per Minute (TPM) limits. With a large resume and long job description, requests can exceed the limit and return HTTP 413 or 429 errors. There is no retry logic or backoff strategy in place.
-- **No streaming.** The LLM response is awaited in full before returning to the client. For long responses this can feel slow (3–10 seconds).
-- **Model is hardcoded.** The model name is set directly in `llm_service.py`. Switching models requires a code change.
-- **Model compatibility requirement.** Only models that support Groq's `json_schema` structured output format can be used. Not all Groq-hosted models support this — check the supported models list at [console.groq.com/docs/structured-outputs](https://console.groq.com/docs/structured-outputs#supported-models) before changing the model. Using an incompatible model will cause HTTP 400 errors on all LLM calls.
-- **`max_completion_tokens` must be sized correctly.** If this value is too low to complete the JSON schema, Groq returns a `json_validate_failed` error (`max completion tokens reached before generating a valid document`). The review call uses 3000 tokens and the validation call uses 800 tokens.
-- **No fallback.** If the LLM returns malformed JSON or a response that fails Pydantic validation, the error propagates as an unhandled exception and results in an HTTP 500.
-- **Prompt injection risk.** The system prompt contains a note instructing the model to ignore instructions inside the resume or job description. However, this is a soft safeguard — a sufficiently adversarial input could still influence model behavior.
-
-### Authentication & Security
-- **No authentication.** Any client that can reach the server can submit requests. There is no API key, user session, or rate limiting at the application level.
-- **No file size enforcement beyond content validation.** There is no `Content-Length` check before reading the file into memory. Very large uploads are read entirely before being rejected.
-
-### Deployment
-- Deployed on Vercel using `@vercel/python` via the `api/index.py` serverless entrypoint.
-- CORS origins are controlled via the `ALLOWED_ORIGINS` environment variable — no code changes needed for new deployments.
-- Python version is pinned via `.python-version`.
-- Vercel Python serverless functions have a cold start on first request after inactivity (~1–3s on free tier).
+- **PDF and DOCX only** — no image resume support, no OCR
+- **Scanned PDFs** (image-embedded) return empty or near-empty text and fail validation
+- **Multi-column PDF layouts** can cause pdfplumber to interleave text from side-by-side columns, degrading parse quality
+- **5000-character hard limit** — resumes exceeding this are rejected with HTTP 400 rather than truncated gracefully
+- **No retry / backoff** — transient Groq rate limit errors (HTTP 429) surface directly to the client
+- **No streaming** — full LLM responses are awaited before returning; typical latency is 3–10 s
+- **Model is hardcoded** — only models supporting Groq's `json_schema` structured output can be used; see [supported models](https://console.groq.com/docs/structured-outputs#supported-models)
+- **No authentication** — any client that can reach the server can submit requests
+- **Prompt injection** — the system prompt instructs the model to ignore instructions inside the resume; this is a soft safeguard only
+- **Cold start** — Vercel Python serverless functions take ~1–3 s to start after inactivity

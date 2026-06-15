@@ -9,7 +9,7 @@ interface StepWizardProps {
 
 const STEPS = [
   { num: 1, label: 'Upload Resume' },
-  { num: 2, label: 'Verify Content' },
+  { num: 2, label: 'Edit Resume' },
   { num: 3, label: 'AI Review' },
 ];
 

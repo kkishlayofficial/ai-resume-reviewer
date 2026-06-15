@@ -53,20 +53,26 @@ interface Step3DashboardProps {
   result: ResumeReviewResponse;
   baselineResult: ResumeReviewResponse | null;
   appliedRecommendations: number[];
+  rejectedRecommendations: number[];
   onApplyRecommendation: (index: number) => void;
+  onRejectRecommendation: (index: number) => void;
   onReEvaluate: () => void;
   onReset: () => void;
   handleDownloadReport: () => void;
+  handleDownloadResume: (format: 'pdf' | 'docx') => void;
 }
 
 export function Step3Dashboard({
   result,
   baselineResult,
   appliedRecommendations,
+  rejectedRecommendations,
   onApplyRecommendation,
+  onRejectRecommendation,
   onReEvaluate,
   onReset,
   handleDownloadReport,
+  handleDownloadResume,
 }: Step3DashboardProps) {
   const {
     overall_score,
@@ -214,7 +220,8 @@ export function Step3Dashboard({
         <div className={styles.recList}>
           {recommendations.map((rec, i) => {
             const isApplied = appliedRecommendations.includes(i);
-            const canApply = rec.action !== 'replace';
+            const isRejected = rejectedRecommendations.includes(i);
+            const isReplace = rec.operation === 'replace';
             return (
               <div
                 key={i}
@@ -230,12 +237,18 @@ export function Step3Dashboard({
                   )}
                 </div>
 
-                <div className={styles.recContentBox}>
-                  <span className={styles.recContentLabel}>
-                    {rec.action === 'replace' ? 'Suggested Update' : 'Suggested Content'}
-                  </span>
-                  <pre className={styles.recContent}>{rec.suggested_content}</pre>
-                </div>
+                {/* Diff view for replace; content box for append */}
+                {isReplace && rec.target ? (
+                  <div className={styles.diffContainer}>
+                    <div className={styles.diffOld}>{rec.target}</div>
+                    <div className={styles.diffNew}>{rec.content}</div>
+                  </div>
+                ) : (
+                  <div className={styles.recContentBox}>
+                    <span className={styles.recContentLabel}>Suggested Content</span>
+                    <pre className={styles.recContent}>{rec.content}</pre>
+                  </div>
+                )}
 
                 <p className={styles.recReasoning}>
                   <span className={styles.recReasoningLabel}>Reason: </span>
@@ -243,34 +256,47 @@ export function Step3Dashboard({
                 </p>
 
                 <div className={styles.recFooter}>
-                  {canApply ? (
-                    isApplied ? (
-                      <span className={styles.recAppliedBadge}>
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                          <circle cx="6" cy="6" r="6" fill="#16A34A" />
-                          <path d="M3 6l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        Applied
-                      </span>
-                    ) : (
+                  {isApplied ? (
+                    <span className={styles.recAppliedBadge}>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                        <circle cx="6" cy="6" r="6" fill="#16A34A" />
+                        <path d="M3 6l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Applied
+                    </span>
+                  ) : isRejected ? (
+                    <span className={styles.recRejectedNote}>Rejected</span>
+                  ) : isReplace ? (
+                    <div className={styles.diffActions}>
                       <button
-                        className={styles.recAddBtn}
+                        className={styles.patchAcceptBtn}
                         onClick={() => onApplyRecommendation(i)}
-                        aria-label={`Add to resume: ${rec.title}`}
+                        aria-label={`Accept change: ${rec.title}`}
                       >
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                          <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                          <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                        Add to Resume
+                        Accept
                       </button>
-                    )
+                      <button
+                        className={styles.patchRejectBtn}
+                        onClick={() => onRejectRecommendation(i)}
+                        aria-label={`Reject change: ${rec.title}`}
+                      >
+                        Reject
+                      </button>
+                    </div>
                   ) : (
-                    <span className={styles.recManualNote}>
+                    <button
+                      className={styles.recAddBtn}
+                      onClick={() => onApplyRecommendation(i)}
+                      aria-label={`Add to resume: ${rec.title}`}
+                    >
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                        <path d="M8.5 1.5l2 2L4 10H2v-2L8.5 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                       </svg>
-                      Update manually in Step 2
-                    </span>
+                      Add to Resume
+                    </button>
                   )}
                 </div>
               </div>
@@ -301,6 +327,44 @@ export function Step3Dashboard({
         </div>
         <p className={styles.jobFitExplanation}>{job_fit.explanation}</p>
       </div>
+
+      {/* ── Download Updated Resume ───────────────────────────────────── */}
+      <Card shadow="sm" className={styles.section}>
+        <div className={styles.downloadResumeSection}>
+          <span className={styles.downloadResumeLabel}>Download Updated Resume</span>
+          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-muted)', margin: 0 }}>
+            Download your resume (with all applied improvements) in your preferred format.
+          </p>
+          <div className={styles.downloadFormatGroup}>
+            <button
+              className={styles.downloadResumeBtn}
+              onClick={() => handleDownloadResume('docx')}
+              aria-label="Download resume as DOCX"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              Download as DOCX
+            </button>
+            <button
+              className={styles.downloadResumeBtn}
+              onClick={() => handleDownloadResume('pdf')}
+              aria-label="Download resume as PDF"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              Download as PDF
+            </button>
+          </div>
+        </div>
+      </Card>
 
       {/* ── Actions ───────────────────────────────────────────────────── */}
       <div className={styles.dashActions}>

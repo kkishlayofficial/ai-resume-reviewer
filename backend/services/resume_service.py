@@ -3,10 +3,11 @@ from schemas.resume import (
     ResumeReviewAIOutput,
     ResumeReviewResponse,
     ResumeExtractionValidation,
+    ParseResumeResponse,
 )
 from fastapi import HTTPException
 from prompts.resume import build_resume_prompt, build_system_prompt
-from services.llm_service import generate_resume_review, is_valid_resume
+from services.llm_service import generate_resume_review, is_valid_resume, parse_resume
 from services.score_service import generate_overall_score
 import re
 
@@ -62,3 +63,13 @@ def preprocess_text(text: str) -> str:
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = re.sub(r"[ \t]{2,}", " ", text)
     return text.strip()
+
+
+async def parse(extracted_text: str) -> ParseResumeResponse:
+    try:
+        structured_resume = parse_resume(extracted_text)
+        return ParseResumeResponse(structured_resume=structured_resume, parse_warnings=[])
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to parse resume structure.")

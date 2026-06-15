@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
-import type { ExperienceLevel, ResumeReviewResponse } from "../../types/resume";
-import { applyRecommendationToText } from "./utils/applyRecommendation";
+import { useState, useEffect, useRef } from "react";
+import type { ExperienceLevel, ResumeReviewResponse, Resume } from "../../types/resume";
+import { applyPatch } from "./utils/applyPatch";
+import { resumeToText } from "./utils/resumeToText";
 import {
   extractResume,
+  parseResume,
   reviewResume,
   getReport,
+  downloadResume,
 } from "../../services/resumeApi";
 import styles from "./ResumeReview.module.css";
 import { StepWizard } from "./StepWizard/StepWizard";
@@ -14,64 +17,58 @@ import { Step2Verify } from "./Step2Verify/Step2Verify";
 import { AnalysisLoading } from "./AnalysisLoading/AnalysisLoading";
 import { Step3Dashboard } from "./Step3Dashboard/Step3Dashboard";
 
-type Phase = "upload" | "extracting" | "verify" | "reviewing" | "dashboard";
-
-interface AppliedRange {
-  start: number;
-  end: number;
-  recIndex: number;
-}
+type Phase = "upload" | "extracting" | "parsing" | "verify" | "reviewing" | "dashboard";
 
 interface State {
   phase: Phase;
   file: File | null;
-  extractedText: string; // original extracted text (for Reset to Original)
-  editedResumeText: string; // user-edited version of the resume text
-  extractionWarnings: string[]; // warnings returned by the extraction API
-  jobDescription: string; // persisted across step navigation
-  experienceLevel: ExperienceLevel; // persisted across step navigation
+  extractedText: string;            // raw text from extraction (for reference)
+  extractionWarnings: string[];
+  parsedResume: Resume | null;      // original parsed model — never mutated
+  editedResume: Resume | null;      // user-edited version (this is what gets reviewed)
+  jobDescription: string;
+  experienceLevel: ExperienceLevel;
   reviewResult: ResumeReviewResponse | null;
-  baselineResult: ResumeReviewResponse | null; // first review result — never overwritten on re-evaluate
-  appliedRecommendations: number[]; // indices of applied recs, persisted
-  appliedRanges: AppliedRange[]; // transient highlight ranges — not persisted
+  baselineResult: ResumeReviewResponse | null;
+  appliedRecommendations: number[];
+  rejectedRecommendations: number[];
   error: string | null;
-  maxReachedStep: 1 | 2 | 3; // highest step ever successfully reached — survives back-navigation
-  step1Dirty: boolean; // file changed after extraction — step 2+ locked until re-extract
-  step2Dirty: boolean; // step 2 fields changed after review — step 3 locked until re-review
+  maxReachedStep: 1 | 2 | 3;
+  step1Dirty: boolean;
+  step2Dirty: boolean;
+  recommendationAddedContents: string[];
 }
 
 const INITIAL_STATE: State = {
   phase: "upload",
   file: null,
   extractedText: "",
-  editedResumeText: "",
   extractionWarnings: [],
+  parsedResume: null,
+  editedResume: null,
   jobDescription: "",
   experienceLevel: "mid",
   reviewResult: null,
   baselineResult: null,
   appliedRecommendations: [],
-  appliedRanges: [],
+  rejectedRecommendations: [],
   error: null,
   maxReachedStep: 1,
   step1Dirty: false,
   step2Dirty: false,
+  recommendationAddedContents: [],
 };
 
-const STORAGE_KEY = "resume-review-state";
+const STORAGE_KEY = "resume-review-state-v2";
 const FILE_STORAGE_KEY = "resume-review-file";
 
-// Persisted shape excludes File (handled separately), transient error, and transient highlight ranges
-type PersistedState = Omit<State, "file" | "error" | "appliedRanges">;
+type PersistedState = Omit<State, "file" | "error">;
 
 function loadPersistedFile(): File | null {
   try {
     const raw = localStorage.getItem(FILE_STORAGE_KEY);
     if (!raw) return null;
-    const { dataUrl, name } = JSON.parse(raw) as {
-      dataUrl: string;
-      name: string;
-    };
+    const { dataUrl, name } = JSON.parse(raw) as { dataUrl: string; name: string };
     const [header, base64] = dataUrl.split(",");
     const mimeMatch = header.match(/:(.*?);/);
     const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
@@ -90,25 +87,30 @@ function loadState(): State {
     if (!raw) return INITIAL_STATE;
     const parsed = JSON.parse(raw) as PersistedState;
 
-    // Discard any persisted reviewResult / baselineResult whose recommendations
-    // predate the new schema (missing `section` field) to avoid runtime crashes.
+    // Discard stale state that predates the structured resume model
+    if (parsed.editedResume && !("contact" in parsed.editedResume)) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(FILE_STORAGE_KEY);
+      return INITIAL_STATE;
+    }
+
+    // Discard stale reviewResult that uses old recommendation schema (missing `operation`)
     const hasStaleRecs = (result: ResumeReviewResponse | null) =>
-      result?.recommendations?.some((r) => !("section" in r)) ?? false;
+      result?.recommendations?.some((r) => !("operation" in r)) ?? false;
     if (hasStaleRecs(parsed.reviewResult) || hasStaleRecs(parsed.baselineResult)) {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(FILE_STORAGE_KEY);
       return INITIAL_STATE;
     }
 
-    // Normalize in-flight phases — they cannot be resumed after a page refresh
     const phase: Phase =
-      parsed.phase === "extracting"
+      parsed.phase === "extracting" || parsed.phase === "parsing"
         ? "upload"
         : parsed.phase === "reviewing"
           ? "verify"
           : parsed.phase;
     const file = loadPersistedFile();
-    return { ...INITIAL_STATE, ...parsed, phase, file, error: null };
+    return { ...INITIAL_STATE, ...parsed, phase, file, error: null, recommendationAddedContents: parsed.recommendationAddedContents ?? [] };
   } catch {
     return INITIAL_STATE;
   }
@@ -116,10 +118,9 @@ function loadState(): State {
 
 function saveState(state: State): void {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { file: _file, error: _error, appliedRanges: _appliedRanges, ...toSave } = state;
-  // Don't persist in-flight phases
+  const { file: _file, error: _error, ...toSave } = state;
   const phase: Phase =
-    toSave.phase === "extracting"
+    toSave.phase === "extracting" || toSave.phase === "parsing"
       ? "upload"
       : toSave.phase === "reviewing"
         ? "verify"
@@ -128,19 +129,13 @@ function saveState(state: State): void {
 }
 
 function phaseToStep(phase: Phase): 1 | 2 | 3 {
-  if (phase === "upload" || phase === "extracting") return 1;
+  if (phase === "upload" || phase === "extracting" || phase === "parsing") return 1;
   if (phase === "verify" || phase === "reviewing") return 2;
   return 3;
 }
 
-// Completed steps are all steps up to maxReachedStep, minus the current step
-function completedStepsFor(
-  maxReachedStep: 1 | 2 | 3,
-  currentStep: 1 | 2 | 3,
-): number[] {
-  return Array.from({ length: maxReachedStep }, (_, i) => i + 1).filter(
-    (s) => s !== currentStep,
-  );
+function completedStepsFor(maxReachedStep: 1 | 2 | 3, currentStep: 1 | 2 | 3): number[] {
+  return Array.from({ length: maxReachedStep }, (_, i) => i + 1).filter((s) => s !== currentStep);
 }
 
 export function ResumeReview() {
@@ -150,7 +145,6 @@ export function ResumeReview() {
     saveState(state);
   }, [state]);
 
-  // Serialize the File object separately as a Base64 data URL
   useEffect(() => {
     if (!state.file) {
       localStorage.removeItem(FILE_STORAGE_KEY);
@@ -164,7 +158,7 @@ export function ResumeReview() {
           JSON.stringify({ dataUrl: reader.result, name: state.file!.name }),
         );
       } catch {
-        // Quota exceeded — silently skip file persistence
+        // Quota exceeded — silently skip
       }
     };
     reader.readAsDataURL(state.file);
@@ -173,48 +167,46 @@ export function ResumeReview() {
   const handleExtract = async (file: File) => {
     setState((s) => ({ ...s, phase: "extracting", file, error: null }));
     try {
-      const result = await extractResume(file);
-      console.log("Extracted text:", result.extracted_text);
+      const extractResult = await extractResume(file);
+      // Immediately chain into parsing phase
+      setState((s) => ({ ...s, phase: "parsing" }));
+      const parseResult = await parseResume(extractResult.extracted_text);
       setState((s) => ({
         ...s,
         phase: "verify",
-        extractedText: result.extracted_text,
-        // Only reset edited text when a new file is extracted
-        editedResumeText: result.extracted_text,
-        extractionWarnings: result.extraction_warnings,
+        extractedText: extractResult.extracted_text,
+        extractionWarnings: extractResult.extraction_warnings,
+        parsedResume: parseResult.structured_resume,
+        editedResume: parseResult.structured_resume,
         step1Dirty: false,
-        step2Dirty: false, // new extraction invalidates any prior review
+        step2Dirty: false,
         maxReachedStep: Math.max(s.maxReachedStep, 2) as 1 | 2 | 3,
       }));
     } catch (e) {
       setState((s) => ({
         ...s,
         phase: "upload",
-        error:
-          e instanceof Error
-            ? e.message
-            : "Extraction failed. Please try again.",
+        error: e instanceof Error ? e.message : "Extraction failed. Please try again.",
       }));
     }
   };
 
   const handleReview = async (
-    resumeText: string,
+    resume: Resume,
     jobDescription: string,
     level: ExperienceLevel,
   ) => {
-    // Persist Step 2 values before transitioning to reviewing
     setState((s) => ({
       ...s,
       phase: "reviewing",
-      editedResumeText: resumeText,
+      editedResume: resume,
       jobDescription,
       experienceLevel: level,
       error: null,
     }));
 
-    console.log("Reviewing with:", { resumeText, jobDescription, level });
     try {
+      const resumeText = resumeToText(resume);
       const result = await reviewResume({
         resume_text: resumeText,
         job_description: jobDescription,
@@ -224,9 +216,10 @@ export function ResumeReview() {
         ...s,
         phase: "dashboard",
         reviewResult: result,
-        baselineResult: s.baselineResult ?? result, // only set on the first review
-        appliedRecommendations: [], // new rec set — reset applied indices
-        appliedRanges: [],
+        baselineResult: s.baselineResult ?? result,
+        appliedRecommendations: [],
+        rejectedRecommendations: [],
+        recommendationAddedContents: [],
         step2Dirty: false,
         maxReachedStep: 3,
       }));
@@ -234,8 +227,7 @@ export function ResumeReview() {
       setState((s) => ({
         ...s,
         phase: "verify",
-        error:
-          e instanceof Error ? e.message : "Review failed. Please try again.",
+        error: e instanceof Error ? e.message : "Review failed. Please try again.",
       }));
     }
   };
@@ -248,12 +240,10 @@ export function ResumeReview() {
       document.getElementById("review")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 0);
   };
+
   const handleBack = () => setState((s) => ({ ...s, phase: "upload" }));
 
-  // Called by Step1Upload whenever user actively picks / clears a file
   const handleFileChange = (newFile: File | null) => {
-    // When a different file is selected, wipe all prior progress so the
-    // wizard starts fresh with the new file
     if (newFile !== null && newFile !== state.file) {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(FILE_STORAGE_KEY);
@@ -266,43 +256,48 @@ export function ResumeReview() {
     }
   };
 
-  // Step 2 field change handlers — mark dirty only when a review result already exists
-  const handleResumeTextChange = (text: string) => {
+  const handleResumeChange = (resume: Resume) => {
     setState((s) => ({
       ...s,
-      editedResumeText: text,
-      appliedRanges: [], // positions become stale after manual edits
+      editedResume: resume,
       step2Dirty: s.reviewResult !== null || s.step2Dirty,
     }));
   };
 
   const handleApplyRecommendation = (index: number) => {
-    const rec = state.reviewResult?.recommendations[index];
-    if (!rec || rec.action === "replace") return;
-    const { newText, insertedStart, insertedEnd } = applyRecommendationToText(
-      state.editedResumeText,
-      rec.section,
-      rec.action,
-      rec.suggested_content,
-    );
+    const patch = state.reviewResult?.recommendations[index];
+    if (!patch || !state.editedResume) return;
+    const updatedResume = applyPatch(state.editedResume, patch);
     setState((s) => ({
       ...s,
-      editedResumeText: newText,
+      editedResume: updatedResume,
       appliedRecommendations: [...s.appliedRecommendations, index],
-      appliedRanges: [
-        ...s.appliedRanges,
-        { start: insertedStart, end: insertedEnd, recIndex: index },
-      ],
+      recommendationAddedContents: [...s.recommendationAddedContents, patch.content],
       step2Dirty: true,
     }));
   };
 
+  const handleResetResume = () => {
+    setState((s) => ({
+      ...s,
+      editedResume: s.parsedResume,
+      recommendationAddedContents: [],
+    }));
+  };
+
+  const handleRejectRecommendation = (index: number) => {
+    setState((s) => ({
+      ...s,
+      rejectedRecommendations: [...s.rejectedRecommendations, index],
+    }));
+  };
+
+  const wizardRef = useRef<HTMLDivElement>(null);
+
   const handleReEvaluate = () => {
-    handleReview(
-      state.editedResumeText,
-      state.jobDescription,
-      state.experienceLevel,
-    );
+    if (!state.editedResume) return;
+    wizardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    handleReview(state.editedResume, state.jobDescription, state.experienceLevel);
   };
 
   const handleJobDescriptionChange = (jd: string) => {
@@ -323,41 +318,44 @@ export function ResumeReview() {
 
   const handleStepClick = (step: 1 | 2 | 3) => {
     const current = phaseToStep(state.phase);
-    if (step === current) return; // already here
-    if (step > state.maxReachedStep) return; // not yet unlocked
-    if (step >= 2 && state.step1Dirty) return; // file changed — must re-extract first
-    if (step === 3 && state.step2Dirty) return; // step 2 changed — must re-review first
+    if (step === current) return;
+    if (step > state.maxReachedStep) return;
+    if (step >= 2 && state.step1Dirty) return;
+    if (step === 3 && state.step2Dirty) return;
     if (step === 1) setState((s) => ({ ...s, phase: "upload", error: null }));
     if (step === 2) setState((s) => ({ ...s, phase: "verify", error: null }));
-    if (step === 3)
-      setState((s) => ({ ...s, phase: "dashboard", error: null }));
+    if (step === 3) setState((s) => ({ ...s, phase: "dashboard", error: null }));
   };
 
   const handleDownloadReport = async () => {
     try {
       const response = await getReport(state.reviewResult!);
       const blob = await response.blob();
-
       const url = window.URL.createObjectURL(blob);
-
       const link = document.createElement("a");
       link.href = url;
       link.download = "resume-analysis-report.pdf";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
-      // Delay revocation so the browser has time to initiate the download
       setTimeout(() => window.URL.revokeObjectURL(url), 100);
     } catch (e) {
-      console.log(e);
+      console.error(e);
+    }
+  };
+
+  const handleDownloadResume = async (format: "pdf" | "docx") => {
+    if (!state.editedResume) return;
+    try {
+      await downloadResume(state.editedResume, format);
+    } catch (e) {
+      console.error(e);
     }
   };
 
   const currentStep = phaseToStep(state.phase);
   const completedSteps = completedStepsFor(state.maxReachedStep, currentStep);
 
-  // Steps that are completed but locked due to upstream changes
   const lockedSteps: number[] = [];
   if (state.step1Dirty) {
     if (completedSteps.includes(2)) lockedSteps.push(2);
@@ -379,17 +377,19 @@ export function ResumeReview() {
             Resume Review in 3 Simple Steps
           </h2>
           <p className={styles.sectionSub}>
-            Upload your resume, verify the extracted content, and receive a
+            Upload your resume, edit the structured content, and receive a
             comprehensive AI evaluation.
           </p>
         </div>
 
+        <div ref={wizardRef}>
         <StepWizard
           currentStep={currentStep}
           completedSteps={completedSteps}
           lockedSteps={lockedSteps}
           onStepClick={handleStepClick}
         />
+        </div>
 
         {state.error && (
           <div className={styles.errorBanner} role='alert'>
@@ -420,21 +420,24 @@ export function ResumeReview() {
           />
         )}
 
-        {state.phase === "extracting" && <ExtractionLoading />}
+        {(state.phase === "extracting" || state.phase === "parsing") && (
+          <ExtractionLoading phase={state.phase === "parsing" ? "parsing" : "extracting"} />
+        )}
 
-        {state.phase === "verify" && (
+        {state.phase === "verify" && state.editedResume && (
           <Step2Verify
-            extractedText={state.extractedText}
-            resumeText={state.editedResumeText}
+            parsedResume={state.parsedResume!}
+            editedResume={state.editedResume}
             extractionWarnings={state.extractionWarnings}
             jobDescription={state.jobDescription}
             experienceLevel={state.experienceLevel}
-            onResumeTextChange={handleResumeTextChange}
+            onResumeChange={handleResumeChange}
             onJobDescriptionChange={handleJobDescriptionChange}
             onExperienceLevelChange={handleExperienceLevelChange}
             onReview={handleReview}
             onBack={handleBack}
-            appliedRanges={state.appliedRanges}
+            onResetResume={handleResetResume}
+            recommendationAddedContents={state.recommendationAddedContents}
           />
         )}
 
@@ -445,13 +448,17 @@ export function ResumeReview() {
             result={state.reviewResult}
             baselineResult={state.baselineResult}
             appliedRecommendations={state.appliedRecommendations}
+            rejectedRecommendations={state.rejectedRecommendations}
             onApplyRecommendation={handleApplyRecommendation}
+            onRejectRecommendation={handleRejectRecommendation}
             onReEvaluate={handleReEvaluate}
             onReset={handleReset}
             handleDownloadReport={handleDownloadReport}
+            handleDownloadResume={handleDownloadResume}
           />
         )}
       </div>
     </section>
   );
 }
+

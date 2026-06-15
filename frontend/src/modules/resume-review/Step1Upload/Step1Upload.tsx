@@ -40,9 +40,10 @@ export function Step1Upload({ onExtract, initialFile, onFileChange }: Step1Uploa
   };
 
   const handleReplace = () => {
-    setFile(null);
-    onFileChange?.(null);
-    if (inputRef.current) inputRef.current.value = '';
+    if (inputRef.current) {
+      inputRef.current.value = '';
+      inputRef.current.click();
+    }
   };
 
   return (
@@ -85,14 +86,6 @@ export function Step1Upload({ onExtract, initialFile, onFileChange }: Step1Uploa
                 <p className={styles.dropSub}>PDF or DOCX · Max 10MB</p>
               </div>
             </div>
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".pdf,.docx"
-              className={styles.hiddenInput}
-              onChange={handleFileChange}
-              aria-label="Choose resume file"
-            />
           </>
         ) : (
           <div className={styles.filePreview}>
@@ -128,6 +121,16 @@ export function Step1Upload({ onExtract, initialFile, onFileChange }: Step1Uploa
             </div>
           </div>
         )}
+
+        {/* Always mounted so handleReplace can trigger it while a file is shown */}
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".pdf,.docx"
+          className={styles.hiddenInput}
+          onChange={handleFileChange}
+          aria-label="Choose resume file"
+        />
       </div>
     </div>
   );
