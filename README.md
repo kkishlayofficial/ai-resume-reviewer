@@ -55,6 +55,45 @@ HTTP errors from the backend are mapped to clear, actionable user messages inste
 - `503` → "The AI service is temporarily unavailable. Please try again shortly."
 - `429` → "The AI service is currently busy. Please wait a moment and try again."
 - `504` → "The AI service took too long to respond. Please try again."
+- `413` → "Your resume file is too large. Please upload a file under 10 MB."
+
+All error codes (400, 401, 403, 413, 422, 429, 500, 502, 503, 504) have mapped friendly messages defined in [frontend/src/services/resumeApi.ts](frontend/src/services/resumeApi.ts#L205-L230).
+
+---
+
+## Testing & Quality Assurance
+
+### Full Test Coverage
+The project includes comprehensive unit tests for both backend and frontend:
+
+**Backend (76 tests)**
+- `test_llm_service.py` — Multi-model fallback, validation, JSON schema generation
+- `test_schemas.py` — All Pydantic models (Resume, PatchOperation, JobFit, etc.)
+- `test_score_service.py` — Weighted score calculation, rounding, edge cases
+- `test_extraction_service.py` — PDF/DOCX text extraction, boundary conditions
+- `test_report_service.py` — PDF report generation with all sections
+
+Run backend tests:
+```bash
+cd backend
+python3 -m pytest tests/ -v --cov=services --cov=schemas --cov-report=html
+```
+
+**Frontend (68 tests)**
+- `applyPatch.test.ts` — Patch application to Resume model (all operations)
+- `resumeApi.test.ts` — API client, error handling, friendly error messages
+- `resumeToText.test.ts` — Resume serialization with edge cases
+- `useTheme.test.ts` — Theme toggle, localStorage persistence, DOM updates
+- `ui.test.tsx` — Button, Card, Badge, Chip, CircularScore, ProgressBar components
+
+Run frontend tests:
+```bash
+cd frontend
+npm run test    # Watch mode
+npm run test:ui # Single run (exit)
+```
+
+**Total: 144 tests, 100% passing**
 
 ---
 

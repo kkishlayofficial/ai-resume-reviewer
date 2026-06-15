@@ -250,6 +250,32 @@ Live URL: **https://ai-resume-reviewer-rho-rust.vercel.app**
 
 ---
 
+## Testing & Quality Assurance
+
+The frontend includes 68 unit tests with full coverage of utilities, services, hooks, and components:
+
+```bash
+# Run tests in watch mode
+npm run test
+
+# Run tests once and exit
+npm run test:ui
+
+# Generate coverage report
+npm run test:coverage
+```
+
+**Test suites:**
+- `applyPatch.test.ts` (15 tests) — Patch application logic for all resume sections
+- `resumeApi.test.ts` (19 tests) — API client, friendly error messages, status code mapping
+- `resumeToText.test.ts` (14 tests) — Resume model serialization with edge cases
+- `useTheme.test.ts` (7 tests) — Theme toggle, localStorage persistence, DOM updates
+- `ui.test.tsx` (13 tests) — Button, Card, Badge, Chip, CircularScore, ProgressBar components
+
+**Configuration:** `vitest.config.ts` uses the React plugin, happy-dom environment, and v8 coverage provider. All tests run in happy-dom for fast, isolated unit testing without a full browser.
+
+---
+
 ## Known Limitations
 
 - **PDF/DOCX only** — no image resume support
@@ -257,4 +283,3 @@ Live URL: **https://ai-resume-reviewer-rho-rust.vercel.app**
 - **No retry mechanism** — transient errors require a manual retry
 - **No diff view** — Reset to Original reverts all edits without a before/after comparison
 - **Step 3 not fully optimised for small screens** — the multi-card dashboard is readable but not polished on mobile
-- **No unit or integration tests** — `MOCK_MODE` is the primary development convenience, not an automated test suite

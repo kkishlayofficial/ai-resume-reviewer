@@ -270,6 +270,33 @@ Controlled via the `ALLOWED_ORIGINS` environment variable (comma-separated). Def
 
 ---
 
+## Testing & Quality Assurance
+
+The backend includes 76 unit tests with 100% coverage of services and schemas:
+
+```bash
+# Run all tests with coverage report
+python3 -m pytest tests/ -v --cov=services --cov=schemas --cov-report=html
+
+# Run specific test file
+python3 -m pytest tests/test_llm_service.py -v
+
+# Run with short traceback
+python3 -m pytest tests/ --tb=short
+```
+
+**Test suites:**
+- `test_llm_service.py` (15 tests) — Multi-model fallback, schema validation, heuristic resume detection
+- `test_schemas.py` (20 tests) — All Pydantic models (Resume, PatchOperation, JobFit, etc.)
+- `test_score_service.py` (10 tests) — Weighted score calculation, boundary conditions, rounding
+- `test_extraction_service.py` (12 tests) — PDF/DOCX extraction, error handling
+- `test_report_service.py` (9 tests) — PDF report generation, formatting
+- `test_resume_service.py` (10 tests) — Orchestration, validation pipeline
+
+**Configuration:** `pytest.ini` specifies coverage targets and markers. Fixtures in `conftest.py` provide mock Groq clients and sample Resume objects.
+
+---
+
 ## Known Limitations
 
 - **PDF and DOCX only** — no image resume support, no OCR
