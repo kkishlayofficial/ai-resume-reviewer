@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { extractResume, parseResume, reviewResume, getReport, downloadResume, friendlyError, STATUS_MESSAGES } from '../resumeApi';
+import { extractResume, parseResume, reviewResume, getReport, friendlyError, STATUS_MESSAGES } from '../resumeApi';
 
 describe('friendlyError', () => {
   it('should map 429 to rate limit message', () => {

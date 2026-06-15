@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import React from 'react';
 import { Button } from '../../components/ui/Button/Button';
 import { Card } from '../../components/ui/Card/Card';
@@ -49,7 +49,7 @@ describe('Card Component', () => {
 
 describe('Badge Component', () => {
   it('should render badge element', () => {
-    const { container } = render(React.createElement(Badge, { priority: 'high', children: 'High Priority' }));
+    const { container } = render(React.createElement(Badge, { priority: 'high' }));
     const badge = container.querySelector('span');
     expect(badge).toBeDefined();
   });
